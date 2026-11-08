@@ -2,12 +2,13 @@
 
 [![CI](https://github.com/wissemhammami/retail-revenue-forecasting/actions/workflows/ci.yml/badge.svg)](https://github.com/wissemhammami/retail-revenue-forecasting/actions/workflows/ci.yml)
 
-28-day daily revenue forecasting on the UCI Online Retail dataset. A seasonal-naive baseline, Prophet and XGBoost are compared with rolling-origin backtesting; the champion is served as a static site and a Streamlit dashboard.
+28-day daily revenue forecasting on the UCI Online Retail dataset. A seasonal-naive baseline, Prophet and XGBoost are compared with rolling-origin backtesting; the champion is served as a Streamlit dashboard.
 
 ## Live demo
 
-- **Forecast site:** https://wissemhammami.github.io/retail-revenue-forecasting/
-- **Interactive dashboard:** https://retail-wissem.streamlit.app/
+- Live dashboard: https://retail-wissem.streamlit.app/
+
+The first load after a period of inactivity can take about 30 seconds.
 
 ## Problem
 
@@ -32,7 +33,7 @@ Selection rule, fixed before the test run: a challenger must have a lower pooled
 3. **Features:** calendar flags and lags (7, 14, 28) with shifted rolling means, built without future revenue.
 4. **Evaluate:** rolling-origin folds, WAPE, MAE, RMSE, bias, per-horizon and per-origin breakdowns.
 5. **Forecast:** champion fitted on the full history; 80% intervals from the 10th and 90th development residual quantiles per horizon bucket; closure days forced to zero; days right after a closure flagged unreliable.
-6. **Serve:** static site (`docs/`), Streamlit dashboard (`app/`), Docker image, CI.
+6. **Serve:** Streamlit dashboard (`app/`), Docker image, CI.
 
 ## Project structure
 
@@ -41,7 +42,6 @@ app/           Streamlit dashboard + its own requirements.txt
 configs/       config.yaml, best_params.json
 dashboard_data/ small CSV/JSON files read by the dashboard
 data/          raw/ and interim/ are gitignored; processed/ is committed (small)
-docs/          GitHub Pages site (index.html + data/*.json)
 notebooks/     EDA notebook
 scripts/       pipeline entry points
 src/           retail_forecast package
@@ -79,14 +79,11 @@ make features
 make cv          # development CV and champion selection
 make test-run    # one-shot test evaluation
 make forecast
-python scripts/export_site_data.py
-python scripts/export_site_history.py
 ```
 
 ## Deployment
 
-- **Static site:** GitHub Pages, branch `main`, folder `/docs`. It reads `docs/data/forecast.json` and `docs/data/history.json`, so no server is needed.
-- **Dashboard:** Streamlit Community Cloud, entrypoint `app/dashboard.py`, Python 3.12. Dependencies come from `app/requirements.txt` (the file next to the entrypoint takes priority over the root one).
+Streamlit Community Cloud, entrypoint `app/dashboard.py`, Python 3.12. Dependencies come from `app/requirements.txt`.
 
 ## Limitations
 
