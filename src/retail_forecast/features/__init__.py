@@ -1,1 +1,1 @@
-"""Construction des variables explicatives."""
+"""Feature construction."""

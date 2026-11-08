@@ -1,4 +1,4 @@
-"""Modèle de prévision XGBoost."""
+"""XGBoost forecasting model."""
 
 from __future__ import annotations
 
@@ -35,9 +35,9 @@ def forecast(
     config: Mapping[str, Any],
     params: Mapping[str, Any] | None = None,
 ) -> pd.DataFrame:
-    """Prévoit les revenus journaliers avec XGBoost de façon récursive."""
+    """Recursively forecast daily revenue with XGBoost."""
     if horizon <= 0:
-        raise ValueError("horizon doit être strictement positif")
+        raise ValueError("horizon must be strictly positive")
 
     origin_timestamp = pd.Timestamp(origin).normalize()
     work = daily.copy()
@@ -48,14 +48,14 @@ def forecast(
     unique_dates = work["date"].drop_duplicates()
     if len(unique_dates) < min_train_days:
         raise ValueError(
-            f"Historique insuffisant pour l'origine {origin_timestamp.date()}: "
-            f"{len(unique_dates)} jours disponibles, minimum requis {min_train_days}"
+            f"Insufficient history for origin {origin_timestamp.date()}: "
+            f"{len(unique_dates)} days available, minimum required {min_train_days}"
         )
 
-    # Features construites sur la série tronquée à date <= origine
+    # Features built on the series truncated at date <= origin.
     feats = build_features(work, config)
 
-    # Lignes d'entraînement = jours d'ouverture avec toutes les features non NaN
+    # Training rows = trading days with all non-NaN features.
     train_mask = (
         feats["is_trading_day"].astype(bool)
         & feats[FEATURE_COLUMNS].notna().all(axis=1)
@@ -66,7 +66,7 @@ def forecast(
     revenue_series = work.set_index("date")["revenue"].astype(float)
     y_train = revenue_series.loc[train_df.index]
 
-    # Hyperparamètres
+    # Hyperparameters.
     xgb_cfg = config.get("models", {}).get("xgboost", {})
     fixed_params = dict(xgb_cfg.get("fixed", {
         "objective": "reg:squarederror",

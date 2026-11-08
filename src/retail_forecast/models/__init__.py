@@ -1,1 +1,1 @@
-"""Modèles de prévision."""
+"""Forecasting models."""

@@ -1,4 +1,4 @@
-"""Modèles de référence sans apprentissage."""
+"""Reference models without training."""
 
 from __future__ import annotations
 
@@ -17,15 +17,15 @@ def naive_seasonal_forecast(
     horizon: int,
     config: Mapping[str, Any],
 ) -> pd.DataFrame:
-    """Prévoit chaque jour par la valeur à la semaine saisonnière précédente."""
+    """Forecast each day using the value from the previous seasonal week."""
     if horizon <= 0:
-        raise ValueError("horizon doit être strictement positif")
+        raise ValueError("horizon must be strictly positive")
     origin_timestamp = pd.Timestamp(origin).normalize()
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"]).dt.normalize()
     work = work.loc[work["date"] <= origin_timestamp].sort_values("date")
     if work.empty:
-        raise ValueError("Aucune donnée disponible jusqu'à l'origine")
+        raise ValueError("No data available through the origin")
     revenue_by_date = work.drop_duplicates("date").set_index("date")["revenue"].astype(float)
     target_dates = pd.date_range(
         origin_timestamp + pd.Timedelta(days=1), periods=horizon, freq="D"
@@ -35,13 +35,13 @@ def naive_seasonal_forecast(
     source_dates = target_dates - pd.to_timedelta(7 * k_values, unit="D")
     if source_dates.min() < revenue_by_date.index.min():
         raise ValueError(
-            "La date source du naïf tombe avant le début de la série: "
+            "The naive source date falls before the start of the series: "
             f"{source_dates.min().date()}"
         )
     missing_sources = source_dates.difference(revenue_by_date.index)
     if len(missing_sources):
         raise ValueError(
-            "Dates sources manquantes pour le naïf: "
+            "Source dates missing for the naive forecast: "
             + ", ".join(str(value.date()) for value in missing_sources)
         )
     predictions = revenue_by_date.loc[source_dates].to_numpy(dtype=float, copy=True)
@@ -60,15 +60,15 @@ def naive_seasonal_fallback_forecast(
     horizon: int,
     config: Mapping[str, Any],
 ) -> pd.DataFrame:
-    """Prévoit chaque jour par le même jour des semaines passées, avec repli si jour fermé."""
+    """Forecast each day from the same day in past weeks, falling back when closed."""
     if horizon <= 0:
-        raise ValueError("horizon doit être strictement positif")
+        raise ValueError("horizon must be strictly positive")
     origin_timestamp = pd.Timestamp(origin).normalize()
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"]).dt.normalize()
     work = work.loc[work["date"] <= origin_timestamp].sort_values("date")
     if work.empty:
-        raise ValueError("Aucune donnée disponible jusqu'à l'origine")
+        raise ValueError("No data available through the origin")
     revenue_by_date = work.drop_duplicates("date").set_index("date")["revenue"].astype(float)
     target_dates = pd.date_range(
         origin_timestamp + pd.Timedelta(days=1), periods=horizon, freq="D"
@@ -88,11 +88,11 @@ def naive_seasonal_fallback_forecast(
             source_date = target_date - pd.Timedelta(days=7 * k)
             if source_date < min_date:
                 raise ValueError(
-                    f"La date source du repli tombe avant le début de la série: {source_date.date()}"
+                    f"The fallback source date falls before the start of the series: {source_date.date()}"
                 )
             if source_date not in revenue_by_date.index:
                 raise ValueError(
-                    f"Date source manquante pour le repli: {source_date.date()}"
+                    f"Source date missing for the fallback: {source_date.date()}"
                 )
             if not is_known_closed([source_date], config).iloc[0]:
                 predictions[i] = float(revenue_by_date.loc[source_date])
@@ -104,4 +104,3 @@ def naive_seasonal_fallback_forecast(
         "horizon": horizons,
         "prediction": predictions,
     })
-

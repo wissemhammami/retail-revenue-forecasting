@@ -1,4 +1,4 @@
-"""Construction de variables calendaires et retardées sans fuite temporelle."""
+"""Build calendar and lagged features without temporal leakage."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ FEATURE_COLUMNS = [
 
 
 def _calendar_features(index: pd.DatetimeIndex, trading: pd.Series) -> pd.DataFrame:
-    """Construit les variables connues à l'avance."""
+    """Build features known in advance."""
     christmas = pd.to_datetime(index.year.astype(str) + "-12-24")
     days_to_christmas = (christmas - index).days
     result = pd.DataFrame(index=index)
@@ -36,7 +36,7 @@ def _calendar_features(index: pd.DatetimeIndex, trading: pd.Series) -> pd.DataFr
 
 
 def _feature_frame(revenue: pd.Series, trading: pd.Series) -> pd.DataFrame:
-    """Construit les retards et moyennes avec un décalage d'un jour."""
+    """Build lags and rolling means with a one-day shift."""
     shifted = revenue.shift(1)
     result = pd.DataFrame(index=revenue.index)
     result["lag_7"] = revenue.shift(7)
@@ -52,7 +52,7 @@ def _feature_frame(revenue: pd.Series, trading: pd.Series) -> pd.DataFrame:
 
 
 def build_features(daily: pd.DataFrame, config: Mapping[str, Any]) -> pd.DataFrame:
-    """Construit les features historiques sur tous les jours calendaires."""
+    """Build historical features for all calendar days."""
     del config
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"]).dt.normalize()
@@ -67,9 +67,9 @@ def features_for_origin(
     horizon: int,
     predicted_values: Mapping[str | pd.Timestamp, float] | Sequence[float] | None = None,
 ) -> pd.DataFrame:
-    """Construit récursivement les features cibles avec revenus connus jusqu'à l'origine."""
+    """Recursively build target features with revenue known up to the origin."""
     if horizon <= 0:
-        raise ValueError("horizon doit être strictement positif")
+        raise ValueError("horizon must be strictly positive")
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"]).dt.normalize()
     work = work.sort_values("date").set_index("date")
@@ -95,7 +95,7 @@ def features_for_origin(
                     revenue.loc[timestamp] = float(value)
         else:
             if len(predicted_values) != horizon:
-                raise ValueError("predicted_values doit contenir horizon valeurs")
+                raise ValueError("predicted_values must contain horizon values")
             revenue.loc[target_index] = np.asarray(predicted_values, dtype=float)
     result = _feature_frame(revenue, trading)
     return result.loc[target_index]

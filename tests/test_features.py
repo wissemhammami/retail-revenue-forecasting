@@ -1,4 +1,4 @@
-"""Tests des features calendaires et anti-fuite."""
+"""Tests for calendar features and leakage prevention."""
 
 import pandas as pd
 

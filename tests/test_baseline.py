@@ -68,7 +68,7 @@ def test_naive_has_no_future_leakage() -> None:
 
 
 def test_naive_raises_when_source_is_before_series() -> None:
-    with pytest.raises(ValueError, match="avant le début"):
+    with pytest.raises(ValueError, match="falls before the start"):
         naive_seasonal_forecast(_daily(), "2019-12-01", 28, CONFIG)
 
 
@@ -84,7 +84,7 @@ def test_known_closed_matches_daily_trading_flags() -> None:
 
 
 def test_fallback_identical_to_strict_without_closures() -> None:
-    # Série hebdomadaire périodique sans fermeture : repli identique au naïf strict
+    # Periodic weekly series without closures: fallback matches strict naive.
     daily = _daily()
     daily["revenue"] = daily.index.to_numpy() % 7
     strict = naive_seasonal_forecast(daily, "2019-12-20", 28, MAP_CONFIG)
@@ -93,20 +93,20 @@ def test_fallback_identical_to_strict_without_closures() -> None:
 
 
 def test_fallback_uses_previous_week_when_source_is_closed() -> None:
-    # Une fermeture sur une date source : le repli utilise la semaine précédente, le naïf strict prédit 0
-    # Origine 2019-12-20, h=1 -> cible 2019-12-21 (samedi fermé), h=7 -> cible 2019-12-27 (vendredi)
-    # k=1 pour h=7 -> date source = 2019-12-27 - 7j = 2019-12-20 (vendredi)
-    # Si 2019-12-20 est déclarée fermée :
-    # Naïf strict prend 2019-12-20 (qui vaut revenue de 2019-12-20, mais si 2019-12-20 est connue fermée,
-    # dans le naïf strict la source fermée n'est pas forcée à 0 car cible ouverte, sauf si la cible elle-même est fermée...
-    # ATTENTION : Si la source est un jour férié, le revenu réel du jour férié est 0 !
-    # Donc le naïf strict prédit 0. Le repli prend 2019-12-13 (semaine précédente, ouverte, revenu > 0).
+    # A closure on a source date: fallback uses the previous week; strict naive predicts 0.
+    # Origin 2019-12-20, h=1 -> target 2019-12-21 (closed Saturday), h=7 -> target 2019-12-27 (Friday).
+    # k=1 for h=7 -> source date = 2019-12-27 - 7d = 2019-12-20 (Friday).
+    # If 2019-12-20 is declared closed:
+    # Strict naive uses 2019-12-20 (whose revenue is 0 because it is known closed).
+    # The strict naive source is not forced to 0 when the target is open, unless the target itself is closed.
+    # If the source is a public holiday, its actual revenue is 0.
+    # Therefore strict naive predicts 0. Fallback uses 2019-12-13 (previous open week, revenue > 0).
     cfg = {
         "aggregation": {"closure_dates": ["2019-12-20"]},
         "evaluation": {"horizon": 28},
     }
     dates = pd.date_range("2019-12-01", "2020-01-15")
-    # Donnons du revenu positif partout sauf le 2019-12-20 où revenue = 0 car fermé
+    # Set positive revenue everywhere except 2019-12-20, where revenue = 0 because it is closed.
     daily = pd.DataFrame({
         "date": dates,
         "revenue": 100.0,
@@ -118,15 +118,15 @@ def test_fallback_uses_previous_week_when_source_is_closed() -> None:
     strict = naive_seasonal_forecast(daily, "2019-12-20", 7, cfg)
     fallback = naive_seasonal_fallback_forecast(daily, "2019-12-20", 7, cfg)
 
-    # Pour h=7 (cible 2019-12-27, vendredi ouvert)
-    # Source stricte (k=1) = 2019-12-20 -> strict prédit 0.0
+    # For h=7 (target 2019-12-27, open Friday).
+    # Strict source (k=1) = 2019-12-20 -> strict predicts 0.0.
     assert strict.loc[strict["horizon"] == 7, "prediction"].iloc[0] == 0.0
-    # Repli saute 2019-12-20 (fermé) et prend k=2 -> 2019-12-13 -> prédit 42.0
+    # Fallback skips 2019-12-20 (closed) and uses k=2 -> 2019-12-13 -> predicts 42.0.
     assert fallback.loc[fallback["horizon"] == 7, "prediction"].iloc[0] == 42.0
 
 
 def test_fallback_known_closed_target_predicts_zero() -> None:
-    # Cible fermée connue : prévision 0 pour les deux
+    # Known closed target: both forecasts are 0.
     cfg = {
         "aggregation": {"closure_dates": ["2019-12-25"]},
         "evaluation": {"horizon": 28},
@@ -135,14 +135,14 @@ def test_fallback_known_closed_target_predicts_zero() -> None:
     strict = naive_seasonal_forecast(daily, "2019-12-20", 7, cfg)
     fallback = naive_seasonal_fallback_forecast(daily, "2019-12-20", 7, cfg)
 
-    # 2019-12-25 est h=5
+    # 2019-12-25 is h=5.
     target_date = pd.Timestamp("2019-12-25")
     assert strict.loc[strict["date"] == target_date, "prediction"].iloc[0] == 0.0
     assert fallback.loc[fallback["date"] == target_date, "prediction"].iloc[0] == 0.0
 
 
 def test_fallback_has_no_future_leakage() -> None:
-    # Anti-fuite : altérer un revenu postérieur à l'origine ne change aucune prédiction du repli
+    # Leakage prevention: changing revenue after the origin does not change fallback predictions.
     daily = _daily()
     altered = daily.copy()
     altered.loc[altered["date"] > "2019-12-20", "revenue"] = 999999.0
@@ -152,7 +152,6 @@ def test_fallback_has_no_future_leakage() -> None:
 
 
 def test_fallback_raises_when_source_is_before_series() -> None:
-    # Erreur explicite si le repli sort de la série
-    with pytest.raises(ValueError, match="avant le début"):
+    # Explicit error when fallback goes outside the series.
+    with pytest.raises(ValueError, match="falls before the start"):
         naive_seasonal_fallback_forecast(_daily(), "2019-12-01", 28, CONFIG)
-

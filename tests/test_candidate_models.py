@@ -1,4 +1,4 @@
-"""Tests pour les modèles Prophet et XGBoost."""
+"""Tests for Prophet and XGBoost models."""
 
 from __future__ import annotations
 
@@ -38,16 +38,16 @@ def test_model_forecast_contract(data_and_config, model_fn):
     result = model_fn(daily, origin, horizon, config)
     baseline_result = naive_seasonal_fallback_forecast(daily, origin, horizon, config)
 
-    # Colonnes et taille
+    # Columns and size.
     assert list(result.columns) == ["date", "horizon", "prediction"]
     assert len(result) == 28
-    # Mêmes dates que la baseline
+    # Same dates as the baseline.
     assert result["date"].tolist() == baseline_result["date"].tolist()
-    # Aucun NaN
+    # No NaN values.
     assert not result["prediction"].isna().any()
-    # Aucune valeur négative
+    # No negative values.
     assert (result["prediction"] >= 0.0).all()
-    # Jours fermés connus valent exactement 0
+    # Known closed days equal exactly 0.
     closed = is_known_closed(result["date"], config)
     assert (result.loc[closed, "prediction"] == 0.0).all()
 
@@ -57,7 +57,7 @@ def test_end_to_end_anti_leakage(data_and_config):
     origin = "2011-06-07"
     horizon = 28
 
-    # Création du DataFrame altéré après l'origine
+    # Create the altered DataFrame after the origin.
     altered_daily = daily.copy()
     future_mask = altered_daily["date"] > pd.Timestamp(origin)
     altered_daily.loc[future_mask, "revenue"] = (
@@ -67,7 +67,7 @@ def test_end_to_end_anti_leakage(data_and_config):
         future_mask, "is_trading_day"
     ].astype(bool)
 
-    # Test baseline stricte et repli
+    # Test strict baseline and fallback.
     b_orig = naive_seasonal_forecast(daily, origin, horizon, config)
     b_alt = naive_seasonal_forecast(altered_daily, origin, horizon, config)
     pd.testing.assert_frame_equal(b_orig, b_alt)
@@ -76,12 +76,12 @@ def test_end_to_end_anti_leakage(data_and_config):
     bf_alt = naive_seasonal_fallback_forecast(altered_daily, origin, horizon, config)
     pd.testing.assert_frame_equal(bf_orig, bf_alt)
 
-    # Test Prophet
+    # Test Prophet.
     p_orig = prophet_forecast(daily, origin, horizon, config)
     p_alt = prophet_forecast(altered_daily, origin, horizon, config)
     pd.testing.assert_frame_equal(p_orig, p_alt)
 
-    # Test XGBoost
+    # Test XGBoost.
     x_orig = xgb_forecast(daily, origin, horizon, config)
     x_alt = xgb_forecast(altered_daily, origin, horizon, config)
     pd.testing.assert_frame_equal(x_orig, x_alt)
@@ -104,7 +104,7 @@ def test_determinism_prophet_and_xgboost(data_and_config):
 def test_backtest_common_dates_across_three_models(data_and_config):
     daily, config = data_and_config
     dev_folds = build_folds(daily, config, "dev")
-    # Premier, médian, dernier
+    # First, middle, last.
     first_fold = dev_folds[0]
     mid_fold = dev_folds[len(dev_folds) // 2]
     last_fold = dev_folds[-1]
@@ -118,7 +118,7 @@ def test_backtest_common_dates_across_three_models(data_and_config):
     assert len(res_prophet) == 3 * 28
     assert len(res_xgb) == 3 * 28
 
-    # Mêmes couples (origin, date) pour les trois
+    # Same (origin, date) pairs for all three.
     pairs_base = list(zip(res_base["origin"], res_base["date"]))
     pairs_prophet = list(zip(res_prophet["origin"], res_prophet["date"]))
     pairs_xgb = list(zip(res_xgb["origin"], res_xgb["date"]))
