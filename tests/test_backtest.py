@@ -40,5 +40,5 @@ def test_backtest_raises_when_actual_is_missing() -> None:
         "kind": "dev", "origin": pd.Timestamp("2020-01-07"),
         "regime": "dev",
     }]
-    with pytest.raises(ValueError, match="Revenu réel manquant"):
+    with pytest.raises(ValueError, match="Actual revenue missing"):
         run_backtest(_forecast, _daily().iloc[:-1], folds, CONFIG)

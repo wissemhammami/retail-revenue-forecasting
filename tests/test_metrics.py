@@ -19,16 +19,16 @@ def test_metrics_known_values_and_bias_sign() -> None:
     assert mae(actual, prediction) == pytest.approx(3)
     assert rmse(actual, prediction) == pytest.approx((10**0.5))
     assert bias(actual, prediction) == pytest.approx(-1)
-    with pytest.raises(ValueError, match="somme"):
+    with pytest.raises(ValueError, match="sum of actual values"):
         wape([0, 0], [1, 2])
 
 
 def test_metrics_reject_empty_inputs() -> None:
-    with pytest.raises(ValueError, match="vides"):
+    with pytest.raises(ValueError, match="must not be empty"):
         mae([], [])
-    with pytest.raises(ValueError, match="vides"):
+    with pytest.raises(ValueError, match="must not be empty"):
         rmse([], [])
-    with pytest.raises(ValueError, match="vides"):
+    with pytest.raises(ValueError, match="must not be empty"):
         bias([], [])
 
 

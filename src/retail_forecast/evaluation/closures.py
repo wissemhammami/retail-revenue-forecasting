@@ -1,4 +1,4 @@
-"""Règles de calendrier connues avant la prévision."""
+"""Calendar rules known before forecasting."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ def is_known_closed(
     dates: pd.Series | Sequence[object],
     config: Mapping[str, Any],
 ) -> pd.Series:
-    """Indique les samedis et fermetures explicitement configurées."""
+    """Identify Saturdays and explicitly configured closures."""
     values = pd.to_datetime(pd.Series(dates)).dt.normalize()
     closure_dates = pd.to_datetime(
         config["aggregation"].get("closure_dates", [])

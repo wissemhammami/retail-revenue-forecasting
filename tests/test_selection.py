@@ -92,7 +92,7 @@ def test_no_challenger_qualified_baseline_wins():
     ]
     res = select_champion(candidates)
     assert res["champion_name"] == "baseline"
-    assert "une règle simple suffit" in res["rule_applied"]
+    assert "a simple rule is enough" in res["rule_applied"]
 
 
 def test_unaligned_origins_raises_error():
@@ -102,5 +102,5 @@ def test_unaligned_origins_raises_error():
     # Décaler les dates du challenger
     c_df["origin"] = pd.date_range("2011-03-08", periods=23, freq="7D")
 
-    with pytest.raises(ValueError, match="ne sont pas identiques"):
+    with pytest.raises(ValueError, match="are not identical"):
         count_better_origins(c_df, b_df)

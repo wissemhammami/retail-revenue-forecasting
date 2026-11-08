@@ -1,1 +1,1 @@
-"""Évaluation des prévisions."""
+"""Forecast evaluation."""

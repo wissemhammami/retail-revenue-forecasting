@@ -1,4 +1,4 @@
-"""Banc d'essai commun aux fonctions de prévision."""
+"""Shared backtesting utilities for forecasting functions."""
 
 from __future__ import annotations
 
@@ -19,11 +19,11 @@ def run_backtest(
     folds: list[dict[str, Any]],
     config: Mapping[str, Any],
 ) -> pd.DataFrame:
-    """Exécute une fonction de prévision et rattache les valeurs réelles."""
+    """Run a forecasting function and attach actual values."""
     required_daily = {"date", "revenue"}
     missing_daily = required_daily.difference(daily.columns)
     if missing_daily:
-        raise ValueError(f"Colonnes manquantes dans daily: {sorted(missing_daily)}")
+        raise ValueError(f"Missing columns in daily: {sorted(missing_daily)}")
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"]).dt.normalize()
     actual_by_date = work.drop_duplicates("date").set_index("date")["revenue"].astype(float)
@@ -39,11 +39,11 @@ def run_backtest(
         if not prediction["date"].equals(pd.Series(expected_dates, name="date")):
             predicted_dates = pd.DatetimeIndex(pd.to_datetime(prediction["date"]))
             if not predicted_dates.equals(expected_dates):
-                raise ValueError(f"Dates prédites incorrectes pour {fold['origin']}")
+                raise ValueError(f"Incorrect predicted dates for {fold['origin']}")
         missing_actual = expected_dates.difference(actual_by_date.index)
         if len(missing_actual):
             raise ValueError(
-                "Revenu réel manquant pour les dates cibles: "
+                "Actual revenue missing for target dates: "
                 + ", ".join(str(value.date()) for value in missing_actual)
             )
         result = prediction[["date", "horizon", "prediction"]].copy()

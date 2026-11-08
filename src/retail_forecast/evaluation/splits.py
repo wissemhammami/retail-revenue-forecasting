@@ -1,4 +1,4 @@
-"""Découpage temporel sans fuite entre développement et test."""
+"""Time splitting without leakage between development and test."""
 
 from __future__ import annotations
 
@@ -11,22 +11,22 @@ import pandas as pd
 def generate_origins(start: str | date | pd.Timestamp,
                      end: str | date | pd.Timestamp,
                      step: int) -> list[pd.Timestamp]:
-    """Retourne des origines inclusives régulièrement espacées."""
+    """Return regularly spaced inclusive origins."""
     if step <= 0:
-        raise ValueError("step doit être strictement positif")
+        raise ValueError("step must be strictly positive")
     return list(pd.date_range(pd.Timestamp(start), pd.Timestamp(end), freq=f"{step}D"))
 
 
 def _evaluation_dates(config: Mapping[str, Any], kind: str) -> tuple[pd.Timestamp, pd.Timestamp]:
-    """Lit la fenêtre d'origines du développement ou du test."""
+    """Read the development or test origin window."""
     if kind not in {"dev", "test"}:
-        raise ValueError("kind doit valoir 'dev' ou 'test'")
+        raise ValueError("kind must be 'dev' or 'test'")
     section = config["evaluation"][f"{kind}_origins"]
     return pd.Timestamp(section["start"]), pd.Timestamp(section["end"])
 
 
 def _overlap_days(previous: pd.Timestamp, current: pd.Timestamp, horizon: int) -> int:
-    """Calcule les dates cibles partagées par deux origines consécutives."""
+    """Calculate target dates shared by two consecutive origins."""
     previous_targets = pd.date_range(previous + pd.Timedelta(days=1),
                                      previous + pd.Timedelta(days=horizon))
     current_targets = pd.date_range(current + pd.Timedelta(days=1),
@@ -35,7 +35,7 @@ def _overlap_days(previous: pd.Timestamp, current: pd.Timestamp, horizon: int) -
 
 
 def build_folds(daily: pd.DataFrame, config: Mapping[str, Any], kind: str) -> list[dict[str, Any]]:
-    """Construit des folds expansifs et vérifie les bornes temporelles."""
+    """Build expanding folds and verify time bounds."""
     evaluation = config["evaluation"]
     horizon = int(evaluation["horizon"])
     last_usable = pd.Timestamp(evaluation["last_usable_date"])
@@ -52,14 +52,14 @@ def build_folds(daily: pd.DataFrame, config: Mapping[str, Any], kind: str) -> li
             continue
         if target_end > last_usable:
             raise ValueError(
-                f"Le fold {origin.date()} dépasse last_usable_date "
+                f"Fold {origin.date()} exceeds last_usable_date "
                 f"({target_end.date()} > {last_usable.date()})"
             )
         train_days = int((dates <= origin).sum())
         if train_days < min_train_days:
             raise ValueError(
-                f"Historique insuffisant pour {origin.date()}: "
-                f"{train_days} jours, minimum {min_train_days}"
+                f"Insufficient history for {origin.date()}: "
+                f"{train_days} days, minimum {min_train_days}"
             )
         if origin < first_date:
             raise ValueError(f"Origine hors historique: {origin.date()}")
@@ -89,7 +89,7 @@ def build_folds(daily: pd.DataFrame, config: Mapping[str, Any], kind: str) -> li
 
 
 def overlap_summary(folds: list[dict[str, Any]]) -> dict[str, Any]:
-    """Résume le chevauchement des fenêtres d'un ensemble de folds."""
+    """Summarize window overlap for a set of folds."""
     overlaps = [int(fold["overlap_days_previous"]) for fold in folds[1:]]
     return {
         "folds": len(folds),

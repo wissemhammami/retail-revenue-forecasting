@@ -1,4 +1,4 @@
-"""Sélection du champion et règles de décision."""
+"""Champion selection and decision rules."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ def count_better_origins(
     challenger_per_origin: pd.DataFrame,
     baseline_per_origin: pd.DataFrame,
 ) -> int:
-    """Compte le nombre d'origines où le challenger a un WAPE strictement inférieur à la baseline.
+    """Count origins where the challenger has strictly lower WAPE than the baseline.
 
-    Vérifie que les origines sont rigoureusement identiques entre les deux séries.
+    Verify that origins are exactly identical between both series.
     """
     for df, name in [(challenger_per_origin, "challenger_per_origin"), (baseline_per_origin, "baseline_per_origin")]:
         if "origin" not in df.columns or "wape" not in df.columns:
-            raise ValueError(f"{name} doit contenir les colonnes 'origin' et 'wape'")
+            raise ValueError(f"{name} must contain the 'origin' and 'wape' columns")
 
     c_sorted = challenger_per_origin.sort_values("origin").reset_index(drop=True)
     b_sorted = baseline_per_origin.sort_values("origin").reset_index(drop=True)
@@ -25,9 +25,9 @@ def count_better_origins(
     b_origins = pd.to_datetime(b_sorted["origin"]).dt.normalize()
 
     if not c_origins.equals(b_origins):
-        raise ValueError("Les origines du challenger et de la baseline ne sont pas identiques")
+        raise ValueError("Challenger and baseline origins are not identical")
 
-    # Strictement inférieur (<), les égalités ne comptent pas
+    # Strictly lower (<); ties do not count.
     strictly_better = (c_sorted["wape"].astype(float) < b_sorted["wape"].astype(float)).sum()
     return int(strictly_better)
 
@@ -38,11 +38,11 @@ def is_qualified(
     n_better_origins: int,
     total_origins: int = 23,
 ) -> bool:
-    """Détermine si un challenger est qualifié face à la baseline.
+    """Determine whether a challenger qualifies against the baseline.
 
-    Conditions :
-    - WAPE moyen (poolé) strictement inférieur à la baseline
-    - WAPE par origine strictement inférieur sur la majorité des origines (>= 12 sur 23)
+    Conditions:
+    - Pooled WAPE strictly lower than the baseline.
+    - WAPE strictly lower by origin for a majority of origins (>= 12 of 23).
     """
     majority_threshold = (total_origins // 2) + 1
     has_lower_pooled = float(challenger_pooled_wape) < float(baseline_pooled_wape)
@@ -54,20 +54,20 @@ def select_champion(
     candidates: list[dict[str, Any]],
     baseline_name: str = "baseline",
 ) -> dict[str, Any]:
-    """Sélectionne le champion parmi la baseline et les challengers qualifiés.
+    """Select the champion among the baseline and qualified challengers.
 
-    Chaque candidat est un dictionnaire contenant au minimum :
-    - name : str (ex. 'baseline', 'prophet', 'xgboost')
-    - pooled_wape : float
-    - qualified : bool (pour les challengers ; la baseline est réputée qualifiée par défaut)
+    Each candidate is a dictionary containing at least:
+    - name: str (for example, 'baseline', 'prophet', 'xgboost')
+    - pooled_wape: float
+    - qualified: bool (for challengers; the baseline is qualified by default)
 
-    Règle :
-    - Entre les challengers qualifiés, le WAPE poolé le plus bas l'emporte.
-    - Si aucun challenger n'est qualifié, la baseline est championne (« une règle simple suffit »).
+    Rule:
+    - Among qualified challengers, the lowest pooled WAPE wins.
+    - If no challenger qualifies, the baseline is champion ("a simple rule is enough").
     """
     baseline_cand = next((c for c in candidates if c["name"] == baseline_name), None)
     if baseline_cand is None:
-        raise ValueError(f"Le candidat baseline '{baseline_name}' est introuvable")
+        raise ValueError(f"Baseline candidate '{baseline_name}' not found")
 
     qualified_challengers = [
         c for c in candidates if c["name"] != baseline_name and c.get("qualified", False)
@@ -75,12 +75,12 @@ def select_champion(
 
     if not qualified_challengers:
         champion = baseline_cand
-        rule_applied = "Aucun challenger n'est qualifié : la baseline est championne ('une règle simple suffit')."
+        rule_applied = "No challenger qualifies: the baseline is champion ('a simple rule is enough')."
     else:
-        # Entre challengers qualifiés, le WAPE le plus bas gagne
+        # Among qualified challengers, the lowest WAPE wins.
         champion = min(qualified_challengers, key=lambda c: float(c["pooled_wape"]))
         rule_applied = (
-            f"Challenger qualifié avec le WAPE poolé le plus bas ({champion['name']} avec {champion['pooled_wape']:.4f})."
+            f"Qualified challenger with the lowest pooled WAPE ({champion['name']} at {champion['pooled_wape']:.4f})."
         )
 
     return {
