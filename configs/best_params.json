@@ -1,6 +1,6 @@
 {
-  "rule": "Prophet ou XGBoost ne remplace la baseline que s'il a un WAPE moyen inférieur à la baseline ET un WAPE par origine inférieur sur la majorité des origines (>= 12 sur 23). Entre deux challengers qualifiés, le WAPE moyen le plus bas l'emporte. Si aucun n'est qualifié, la baseline est championne ('une règle simple suffit').",
-  "rule_applied": "Challenger qualifié avec le WAPE poolé le plus bas (prophet avec 0.3000).",
+  "rule": "Prophet or XGBoost replaces the baseline only if it has lower mean WAPE than the baseline AND lower WAPE by origin on a majority of origins (>= 12 of 23). Among qualified challengers, the lowest mean WAPE wins. If none qualifies, the baseline is champion ('a simple rule is enough').",
+  "rule_applied": "Qualified challenger with the lowest pooled WAPE (prophet at 0.3000).",
   "champion": "prophet",
   "baseline": {
     "model": "baseline",
@@ -29,7 +29,7 @@
     "wape_15_28": 0.3081099153081763,
     "n_origins_better_than_baseline": 17,
     "qualified": true,
-    "qualification_reason": "WAPE 0.3000 < 0.3620 et 17/23 origines meilleures (seuil: 12)"
+    "qualification_reason": "WAPE 0.3000 < 0.3620 and 17/23 better origins (threshold: 12)"
   },
   "xgboost": {
     "model": "xgboost",
@@ -48,6 +48,6 @@
     "wape_15_28": 0.32574761024145926,
     "n_origins_better_than_baseline": 18,
     "qualified": true,
-    "qualification_reason": "WAPE 0.3320 < 0.3620 et 18/23 origines meilleures (seuil: 12)"
+    "qualification_reason": "WAPE 0.3320 < 0.3620 and 18/23 better origins (threshold: 12)"
   }
 }
