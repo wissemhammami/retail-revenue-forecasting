@@ -250,15 +250,27 @@ def _performance_tab(metrics: pd.DataFrame) -> None:
 def _method_tab(forecast: pd.DataFrame, history: pd.DataFrame, champion: str) -> None:
     st.subheader("Data and method")
     st.markdown(
-        f"- The dashboard uses precomputed daily revenue from the UCI Online Retail dataset "
-        f"with {len(history):,} days of history and a {len(forecast)}-day forecast."
+        "- Data: UCI Online Retail, 541,909 transaction rows (2010-12-01 to 2011-12-09), "
+        "cleaned to 519,726 rows (£9.82M revenue) and aggregated to 373 daily observations."
     )
-    st.markdown("- Revenue is cleaned and aggregated upstream before the dashboard reads these exports.")
-    st.markdown("- Models are compared with rolling-origin evaluation, and the champion is selected by test WAPE. "
-                f"The selected model is **{champion.title()}**.")
-    st.markdown("- The 80% intervals are empirical forecast bounds from the exported forecast file; interval coverage "
-                "has not been verified out of sample.")
-    st.markdown("- Limitations include 373 days of history, overlapping test windows, and negative forecast bias.")
+    st.markdown(
+        "- Evaluation: rolling-origin backtest with a 28-day horizon and weekly origins: "
+        "23 development folds for model selection and 11 untouched test folds (Sep to Nov 2011)."
+    )
+    st.markdown(
+        "- Selection: the rule was fixed before the test run. A challenger must beat the "
+        "seasonal-naive baseline on pooled development WAPE and win on at least 12 of 23 "
+        f"development origins. The selected model is **{champion.title()}**."
+    )
+    st.markdown(
+        "- Intervals: 80% bounds come from the 10th and 90th percentiles of development "
+        "backtest errors per horizon bucket. Known closure days are forced to zero and days "
+        "right after a closure are flagged low confidence."
+    )
+    st.markdown(
+        "- Limitations: only 373 days of history, overlapping test windows, a negative bias "
+        "on the test period, and interval coverage not verified out of sample."
+    )
     eda_path = DATA_DIR / "eda_summary.csv"
     if eda_path.exists():
         eda = pd.read_csv(eda_path)
