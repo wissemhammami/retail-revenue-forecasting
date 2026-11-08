@@ -1,4 +1,4 @@
-"""Tests de contrat pour les sorties de validation croisée (cv_results, cv_per_origin, best_params)."""
+"""Contract tests for cross-validation outputs (cv_results, cv_per_origin, best_params)."""
 
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_cv_results_contract():
     path = ROOT / "data" / "processed" / "cv_results.csv"
-    assert path.exists(), f"{path} introuvable"
+    assert path.exists(), f"{path} not found"
 
     df = pd.read_csv(path)
-    # cv_results a 15 lignes
+    # cv_results has 15 rows.
     assert len(df) == 15
 
     expected_cols = [
@@ -37,10 +37,10 @@ def test_cv_results_contract():
         "best_for_model",
     ]
     assert list(df.columns) == expected_cols
-    # Aucune colonne de durée
+    # No duration column.
     assert not any("time" in c.lower() or "duration" in c.lower() or "elapsed" in c.lower() for c in df.columns)
 
-    # Exactement 2 best_for_model (un pour Prophet, un pour XGBoost)
+    # Exactly 2 best_for_model rows (one for Prophet and one for XGBoost).
     assert df["best_for_model"].sum() == 2
     best_models = set(df.loc[df["best_for_model"], "model"])
     assert best_models == {"prophet", "xgboost"}
@@ -48,10 +48,10 @@ def test_cv_results_contract():
 
 def test_cv_per_origin_contract():
     path = ROOT / "data" / "processed" / "cv_per_origin.csv"
-    assert path.exists(), f"{path} introuvable"
+    assert path.exists(), f"{path} not found"
 
     df = pd.read_csv(path)
-    # cv_per_origin a 345 lignes (15 candidats * 23 origines)
+    # cv_per_origin has 345 rows (15 candidates * 23 origins).
     assert len(df) == 345
 
     expected_cols = ["model", "params_id", "origin", "wape"]
@@ -63,7 +63,7 @@ def test_cv_per_origin_contract():
     expected_dev_origins = sorted([pd.Timestamp(f["origin"]).strftime("%Y-%m-%d") for f in dev_folds])
     assert len(expected_dev_origins) == 23
 
-    # Chaque params_id a 23 origines, toutes de développement
+    # Each params_id has 23 origins, all for development.
     unique_params = df["params_id"].unique()
     assert len(unique_params) == 15
 
@@ -76,12 +76,12 @@ def test_cv_per_origin_contract():
 
 def test_best_params_contract():
     path = ROOT / "configs" / "best_params.json"
-    assert path.exists(), f"{path} introuvable"
+    assert path.exists(), f"{path} not found"
 
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # best_params.json contient un champion parmi baseline, prophet, xgboost
+    # best_params.json contains a champion among baseline, prophet, and xgboost.
     assert "champion" in data
     assert data["champion"] in {"baseline", "prophet", "xgboost"}
 
@@ -91,7 +91,7 @@ def test_best_params_contract():
     assert "prophet" in data
     assert "xgboost" in data
 
-    # Vérification des champs requis pour baseline et challengers
+    # Verify required fields for the baseline and challengers.
     for key in ["prophet", "xgboost"]:
         assert "qualified" in data[key]
         assert "n_origins_better_than_baseline" in data[key]

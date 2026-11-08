@@ -1,1 +1,1 @@
-"""Outils de prévision du revenu retail."""
+"""Retail revenue forecasting tools."""

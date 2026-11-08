@@ -1,9 +1,9 @@
-# Windows : utilisez directement .\.venv\Scripts\python.exe si Make n'est pas installé.
-# Activez le venv avant make : sinon python désigne le Python global.
+# Windows: use .\.venv\Scripts\python.exe directly if Make is not installed.
+# Activate the venv before make; otherwise python points to the global Python.
 .PHONY: data clean series eda features folds test test-run dashboard forecast kernel cv
 
 kernel:
-	python -c "import sys; assert sys.prefix != sys.base_prefix, 'activez le venv'"
+	python -c "import sys; assert sys.prefix != sys.base_prefix, 'activate the venv'"
 	python -m ipykernel install --user --name retail-forecast --display-name "Python 3.12 (retail-forecast)"
 
 data:

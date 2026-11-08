@@ -1,4 +1,4 @@
-"""Tests pour les règles de sélection et qualification du champion."""
+"""Tests for champion selection and qualification rules."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def _origins_df(wapes: list[float]) -> pd.DataFrame:
 
 
 def test_12_out_of_23_qualifies_when_pooled_lower():
-    # 12/23 qualifie si le WAPE poolé est plus bas
+    # 12/23 qualifies when pooled WAPE is lower.
     assert is_qualified(
         challenger_pooled_wape=0.35,
         baseline_pooled_wape=0.362,
@@ -28,7 +28,7 @@ def test_12_out_of_23_qualifies_when_pooled_lower():
 
 
 def test_11_out_of_23_does_not_qualify():
-    # 11/23 ne qualifie pas
+    # 11/23 does not qualify.
     assert is_qualified(
         challenger_pooled_wape=0.35,
         baseline_pooled_wape=0.362,
@@ -38,7 +38,7 @@ def test_11_out_of_23_does_not_qualify():
 
 
 def test_pooled_lower_but_11_origins_does_not_qualify():
-    # WAPE poolé plus bas mais 11 origines : non
+    # Lower pooled WAPE but 11 origins: no.
     assert is_qualified(
         challenger_pooled_wape=0.30,
         baseline_pooled_wape=0.362,
@@ -48,7 +48,7 @@ def test_pooled_lower_but_11_origins_does_not_qualify():
 
 
 def test_12_origins_but_pooled_higher_does_not_qualify():
-    # 12 origines mais WAPE poolé plus haut : non
+    # 12 origins but higher pooled WAPE: no.
     assert is_qualified(
         challenger_pooled_wape=0.38,
         baseline_pooled_wape=0.362,
@@ -58,21 +58,21 @@ def test_12_origins_but_pooled_higher_does_not_qualify():
 
 
 def test_ties_do_not_count_in_better_origins():
-    # les égalités ne comptent pas
+    # Ties do not count.
     base_wapes = [0.30] * 23
-    # 10 origines meilleures (0.20), 5 égalités (0.30), 8 pires (0.40)
+    # 10 better origins (0.20), 5 ties (0.30), 8 worse (0.40).
     chall_wapes = [0.20] * 10 + [0.30] * 5 + [0.40] * 8
     b_df = _origins_df(base_wapes)
     c_df = _origins_df(chall_wapes)
 
     better = count_better_origins(c_df, b_df)
     assert better == 10
-    # Avec 10 < 12, non qualifié
+    # With 10 < 12, not qualified.
     assert is_qualified(0.28, 0.30, better, 23) is False
 
 
 def test_two_qualified_challengers_lowest_pooled_wins():
-    # deux challengers qualifiés : le WAPE poolé le plus bas gagne
+    # Two qualified challengers: lowest pooled WAPE wins.
     candidates = [
         {"name": "baseline", "pooled_wape": 0.3620, "qualified": True},
         {"name": "prophet", "pooled_wape": 0.3400, "qualified": True},
@@ -84,7 +84,7 @@ def test_two_qualified_challengers_lowest_pooled_wins():
 
 
 def test_no_challenger_qualified_baseline_wins():
-    # aucun qualifié : baseline championne
+    # None qualified: baseline is champion.
     candidates = [
         {"name": "baseline", "pooled_wape": 0.3620, "qualified": True},
         {"name": "prophet", "pooled_wape": 0.3500, "qualified": False},
@@ -96,10 +96,10 @@ def test_no_challenger_qualified_baseline_wins():
 
 
 def test_unaligned_origins_raises_error():
-    # origines non alignées : erreur
+    # Unaligned origins: error.
     b_df = _origins_df([0.3] * 23)
     c_df = _origins_df([0.2] * 23)
-    # Décaler les dates du challenger
+    # Shift the challenger dates.
     c_df["origin"] = pd.date_range("2011-03-08", periods=23, freq="7D")
 
     with pytest.raises(ValueError, match="are not identical"):

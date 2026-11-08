@@ -1,4 +1,4 @@
-"""Tests de la série journalière et des anomalies."""
+"""Tests for the daily series and anomalies."""
 
 import pandas as pd
 

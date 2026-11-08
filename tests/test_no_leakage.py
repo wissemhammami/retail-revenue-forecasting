@@ -1,4 +1,4 @@
-"""Vérifie l'invariance des prévisions à l'historique postérieur à l'origine."""
+"""Verify forecast invariance to history after the origin."""
 
 from __future__ import annotations
 
@@ -65,5 +65,5 @@ def test_dev_forecasts_are_invariant_to_post_origin_rows() -> None:
         np.testing.assert_allclose(
             full_prediction["prediction"].to_numpy(),
             truncated_prediction["prediction"].to_numpy(),
-            err_msg=f"Prévision non invariante pour {model_name}",
+            err_msg=f"Forecast is not invariant for {model_name}",
         )

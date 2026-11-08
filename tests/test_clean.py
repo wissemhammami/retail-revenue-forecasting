@@ -1,4 +1,4 @@
-"""Tests unitaires du nettoyage, sans réseau."""
+"""Unit tests for cleaning without network access."""
 
 import pandas as pd
 import pytest

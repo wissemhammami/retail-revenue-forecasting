@@ -1,4 +1,4 @@
-"""Tests des fonctions d'analyse exploratoire."""
+"""Tests for exploratory analysis functions."""
 
 import pandas as pd
 import pytest

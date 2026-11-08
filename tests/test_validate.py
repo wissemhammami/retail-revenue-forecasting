@@ -1,4 +1,4 @@
-"""Tests unitaires de validation sans accès réseau."""
+"""Unit tests for validation without network access."""
 
 import pandas as pd
 import pytest

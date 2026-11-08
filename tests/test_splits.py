@@ -1,4 +1,4 @@
-"""Tests du découpage temporel."""
+"""Tests for time splitting."""
 
 import pandas as pd
 
