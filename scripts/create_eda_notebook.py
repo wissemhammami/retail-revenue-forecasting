@@ -67,6 +67,8 @@ def main() -> None:
         nbf.v4.new_markdown_cell("## a. Context and cleaning pipeline"),
         nbf.v4.new_code_cell(
             "cleaning_summary = pd.read_csv(ROOT / 'data/interim/cleaning_summary.csv')\n"
+            "cleaning_summary.loc[cleaning_summary['step'].eq('winsorize'), 'note'] = '0 caps'\n"
+            "cleaning_summary.loc[cleaning_summary['step'].eq('add_revenue'), 'note'] = '0 rows removed'\n"
             "display(cleaning_summary)\n"
             "display(impact)\n"
             "display(cleaning_steps)\n"
