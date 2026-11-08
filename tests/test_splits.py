@@ -24,15 +24,15 @@ def test_folds_are_spaced_bounded_and_regimes_are_correct():
     )
     assert set(fold["regime"] for fold in dev) == {"dev"}
     assert set(fold["regime"] for fold in test) == {
-        "normal", "montee_novembre", "decembre"
+        "normal", "november_ramp", "december"
     }
     assert all(
         fold["regime"] == (
-            "decembre"
+            "december"
             if fold["target_end"] > pd.Timestamp("2011-12-01")
             else "normal"
             if fold["origin"] <= pd.Timestamp("2011-10-15")
-            else "montee_novembre"
+            else "november_ramp"
         )
         for fold in test
     )

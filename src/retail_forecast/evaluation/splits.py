@@ -66,11 +66,11 @@ def build_folds(daily: pd.DataFrame, config: Mapping[str, Any], kind: str) -> li
         if kind == "dev":
             regime = "dev"
         elif target_end > pd.Timestamp(evaluation["december_regime_target_date"]):
-            regime = "decembre"
+            regime = "december"
         elif origin <= pd.Timestamp(evaluation["test_regime_split"]):
             regime = "normal"
         else:
-            regime = "montee_novembre"
+            regime = "november_ramp"
         overlap = (
             _overlap_days(folds[-1]["origin"], origin, horizon)
             if folds else 0

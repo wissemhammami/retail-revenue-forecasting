@@ -145,7 +145,7 @@ def main() -> None:
     print(f"Wrote: {detailed_path} ({len(detailed)} rows)")
     print(f"Wrote: {metrics_path} ({len(metric_rows)} rows)")
     print("Pooled WAPE by regime")
-    for regime in ("normal", "montee_novembre", "decembre"):
+    for regime in ("normal", "november_ramp", "december"):
         print(f"regime={regime}")
         for model_name, backtest in backtests.items():
             regime_frame = backtest[backtest["regime"] == regime]
