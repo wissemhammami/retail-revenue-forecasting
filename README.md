@@ -7,7 +7,7 @@
 ## Live demo
 
 - **Forecast site:** https://wissemhammami.github.io/retail-revenue-forecasting/
-- **Interactive dashboard:** https://YOUR-APP.streamlit.app
+- **Interactive dashboard:** https://retail-wissem.streamlit.app/
 
 ## Problem
 
