@@ -1,0 +1,53 @@
+{
+  "rule": "Prophet ou XGBoost ne remplace la baseline que s'il a un WAPE moyen inférieur à la baseline ET un WAPE par origine inférieur sur la majorité des origines (>= 12 sur 23). Entre deux challengers qualifiés, le WAPE moyen le plus bas l'emporte. Si aucun n'est qualifié, la baseline est championne ('une règle simple suffit').",
+  "rule_applied": "Challenger qualifié avec le WAPE poolé le plus bas (prophet avec 0.3000).",
+  "champion": "prophet",
+  "baseline": {
+    "model": "baseline",
+    "params_id": "baseline",
+    "wape": 0.36196070795222596,
+    "mae": 7937.114982919255,
+    "rmse": 11928.69998808449,
+    "bias": -360.3056754658384,
+    "wape_1_7": 0.35206992371936124,
+    "wape_8_14": 0.3595731101778139,
+    "wape_15_28": 0.3679674792035451
+  },
+  "prophet": {
+    "model": "prophet",
+    "params_id": "prophet|cps=0.2|mode=additive",
+    "params": {
+      "changepoint_prior_scale": 0.2,
+      "seasonality_mode": "additive"
+    },
+    "wape": 0.3000336378510438,
+    "mae": 6579.17124717748,
+    "rmse": 9818.43343539785,
+    "bias": -99.26023700916457,
+    "wape_1_7": 0.28516411487101123,
+    "wape_8_14": 0.29838708287565757,
+    "wape_15_28": 0.3081099153081763,
+    "n_origins_better_than_baseline": 17,
+    "qualified": true,
+    "qualification_reason": "WAPE 0.3000 < 0.3620 et 17/23 origines meilleures (seuil: 12)"
+  },
+  "xgboost": {
+    "model": "xgboost",
+    "params_id": "xgboost|depth=2|n_est=100|lr=0.03",
+    "params": {
+      "max_depth": 2,
+      "n_estimators": 100,
+      "learning_rate": 0.03
+    },
+    "wape": 0.33200461886936977,
+    "mae": 7280.234503172312,
+    "rmse": 10824.940054868232,
+    "bias": 409.287533585258,
+    "wape_1_7": 0.3286507947987216,
+    "wape_8_14": 0.3480836717398075,
+    "wape_15_28": 0.32574761024145926,
+    "n_origins_better_than_baseline": 18,
+    "qualified": true,
+    "qualification_reason": "WAPE 0.3320 < 0.3620 et 18/23 origines meilleures (seuil: 12)"
+  }
+}

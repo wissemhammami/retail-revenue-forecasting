@@ -1,0 +1,10 @@
+/data/raw/
+/data/interim/
+/models/
+/.venv/
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.DS_Store
+*.bak*

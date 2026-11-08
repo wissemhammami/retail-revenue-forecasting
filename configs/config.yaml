@@ -1,0 +1,117 @@
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+raw_filename: online_retail.csv
+source:
+  url: https://archive.ics.uci.edu/ml/machine-learning-databases/00352/Online%20Retail.xlsx
+  xlsx_filename: "Online Retail.xlsx"
+expected:
+  n_columns: 8
+  n_rows: 541909
+  date_min: 2010-12-01
+  date_max: 2011-12-09
+  columns:
+    - InvoiceNo
+    - StockCode
+    - Description
+    - Quantity
+    - InvoiceDate
+    - UnitPrice
+    - CustomerID
+    - Country
+cleaning:
+  returns_mode: exclude
+  drop_cancelled_orders: true
+  non_product_codes:
+    - POST
+    - DOT
+    - M
+    - BANK CHARGES
+    - D
+    - CRUK
+    - AMAZONFEE
+    - C2
+    - S
+    - ADJUST
+    - B
+  non_product_prefixes:
+    - gift_0001
+  non_product_invoice_prefixes:
+    - A
+  winsorize:
+    enabled: false
+    quantity_upper_quantile: 0.99
+    unit_price_upper_quantile: 0.99
+aggregation:
+  partial_last_day: 2011-12-09
+  closure_dates:
+    - 2010-12-24
+    - 2010-12-25
+    - 2010-12-26
+    - 2010-12-27
+    - 2010-12-28
+    - 2010-12-29
+    - 2010-12-30
+    - 2010-12-31
+    - 2011-01-01
+    - 2011-01-02
+    - 2011-01-03
+    - 2011-04-22
+    - 2011-04-24
+    - 2011-04-25
+    - 2011-04-29
+    - 2011-05-02
+    - 2011-05-30
+    - 2011-08-29
+    - 2011-12-24
+    - 2011-12-25
+    - 2011-12-26
+    - 2011-12-27
+    - 2011-12-28
+    - 2011-12-29
+    - 2011-12-30
+    - 2011-12-31
+    - 2012-01-01
+    - 2012-01-02
+    - 2012-01-03
+  anomaly_k: 5
+evaluation:
+  horizon: 28
+  origin_step_days: 7
+  horizon_buckets:
+    - [1, 7]
+    - [8, 14]
+    - [15, 28]
+  dev_origins:
+    start: 2011-03-01
+    end: 2011-08-31
+  test_origins:
+    start: 2011-09-01
+    end: 2011-11-10
+  test_regime_split: 2011-10-15
+  december_regime_target_date: 2011-12-01
+  last_usable_date: 2011-12-08
+  min_train_days: 90
+models:
+  prophet:
+    default:
+      changepoint_prior_scale: 0.05
+      seasonality_mode: additive
+    grid:
+      changepoint_prior_scale: [0.01, 0.05, 0.2]
+      seasonality_mode: [additive, multiplicative]
+  xgboost:
+    default:
+      n_estimators: 200
+      max_depth: 3
+      learning_rate: 0.05
+    fixed:
+      objective: reg:squarederror
+      tree_method: hist
+      random_state: 42
+      n_jobs: 1
+    grid:
+      max_depth: [2, 3]
+      n_estimators: [100, 300]
+      learning_rate: [0.03, 0.1]
