@@ -1,4 +1,4 @@
-"""Nettoyage des transactions avant toute agrégation."""
+"""Clean transactions before any aggregation."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 def drop_exact_duplicates(df: pd.DataFrame) -> pd.DataFrame:
-    """Supprime les lignes strictement dupliquées."""
+    """Remove strictly duplicated rows."""
     return df.drop_duplicates().copy()
 
 
 def flag_cancellations(df: pd.DataFrame) -> pd.DataFrame:
-    """Ajoute le booléen indiquant les factures dont le numéro commence par C."""
+    """Add the boolean indicating invoices whose number starts with C."""
     result = df.copy()
     result["is_cancellation"] = result["InvoiceNo"].astype("string").str.startswith(
         "C", na=False
@@ -26,11 +26,11 @@ def flag_cancellations(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def drop_cancelled_orders(df: pd.DataFrame) -> pd.DataFrame:
-    """Retire une commande antérieure appariée à chaque annulation.
+    """Remove one matched prior order for each cancellation.
 
-    L'appariement exige CustomerID, StockCode et quantité opposée. Chaque
-    annulation retire une seule commande, la plus récente antérieure. Sans
-    CustomerID, aucun appariement n'est réalisé.
+    Matching requires CustomerID, StockCode, and opposite quantity. Each
+    cancellation removes one prior order, the most recent one. Without
+    CustomerID, no matching is performed.
     """
     result = flag_cancellations(df)
     result["_source_order"] = range(len(result))
@@ -78,14 +78,14 @@ def drop_cancelled_orders(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def remove_invalid_prices(df: pd.DataFrame) -> pd.DataFrame:
-    """Conserve uniquement les transactions dont UnitPrice est strictement positif."""
+    """Keep only transactions whose UnitPrice is strictly positive."""
     return df.loc[df["UnitPrice"].gt(0)].copy()
 
 
 def remove_non_product_codes(
     df: pd.DataFrame, codes: list[str], prefixes: list[str]
 ) -> pd.DataFrame:
-    """Exclut les codes et préfixes non-produits, sans tenir compte de la casse."""
+    """Exclude non-product codes and prefixes, ignoring case."""
     stock_codes = df["StockCode"].astype("string").str.upper()
     excluded_codes = {code.upper() for code in codes}
     excluded_prefixes = tuple(prefix.upper() for prefix in prefixes)
@@ -98,7 +98,7 @@ def remove_non_product_codes(
 def remove_non_product_invoices(
     df: pd.DataFrame, prefixes: list[str]
 ) -> pd.DataFrame:
-    """Exclut les factures dont le numéro commence par un préfixe configuré."""
+    """Exclude invoices whose number starts with a configured prefix."""
     invoice_numbers = df["InvoiceNo"].astype("string").str.upper()
     excluded_prefixes = tuple(prefix.upper() for prefix in prefixes)
     if not excluded_prefixes:
@@ -109,9 +109,9 @@ def remove_non_product_invoices(
 def remove_invalid_quantities(
     df: pd.DataFrame, returns_mode: str = "exclude"
 ) -> pd.DataFrame:
-    """Exclut les quantités non positives, sauf les retours conservés en mode net."""
+    """Exclude non-positive quantities, except returns retained in net mode."""
     if returns_mode not in {"exclude", "net"}:
-        raise ValueError("returns_mode doit être 'exclude' ou 'net'")
+        raise ValueError("returns_mode must be 'exclude' or 'net'")
     if returns_mode == "net":
         return df.loc[df["Quantity"].ne(0)].copy()
     return df.loc[df["Quantity"].gt(0)].copy()
@@ -121,7 +121,7 @@ def winsorize(
     df: pd.DataFrame,
     config: Mapping[str, Any],
 ) -> pd.DataFrame:
-    """Plafonne Quantity et UnitPrice et marque les lignes modifiées."""
+    """Cap Quantity and UnitPrice and mark modified rows."""
     result = df.copy()
     result["quantity_capped"] = False
     result["price_capped"] = False
@@ -141,7 +141,7 @@ def winsorize(
     result.loc[result["quantity_capped"], "Quantity"] = quantity_limit
     result.loc[result["price_capped"], "UnitPrice"] = price_limit
     LOGGER.info(
-        "Winsorisation : %d lignes Quantity, %d lignes UnitPrice",
+        "Winsorization: %d Quantity rows, %d UnitPrice rows",
         int(result["quantity_capped"].sum()),
         int(result["price_capped"].sum()),
     )
@@ -149,7 +149,7 @@ def winsorize(
 
 
 def add_revenue(df: pd.DataFrame) -> pd.DataFrame:
-    """Calcule Revenue après les éventuels plafonnements."""
+    """Calculate Revenue after any capping."""
     result = df.copy()
     result["Revenue"] = result["Quantity"] * result["UnitPrice"]
     return result
@@ -158,7 +158,7 @@ def add_revenue(df: pd.DataFrame) -> pd.DataFrame:
 def clean_pipeline(
     df: pd.DataFrame, config: Mapping[str, Any]
 ) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
-    """Applique les règles de nettoyage dans l'ordre spécifié."""
+    """Apply cleaning rules in the specified order."""
     cleaning = config["cleaning"]
     current = df.copy()
     summary: list[dict[str, Any]] = []
@@ -220,11 +220,11 @@ def clean_pipeline(
     before = len(current)
     current = winsorize(current, cleaning)
     capped = int(current["quantity_capped"].sum() + current["price_capped"].sum())
-    record("winsorize", before, len(current), f"{capped} plafonnements")
+    record("winsorize", before, len(current), f"{capped} caps")
 
     before = len(current)
     current = add_revenue(current)
-    record("add_revenue", before, len(current), "0 ligne supprimée")
+    record("add_revenue", before, len(current), "0 rows removed")
     if cleaning["winsorize"]["enabled"]:
         before = len(current)
         current = drop_exact_duplicates(current)
@@ -232,7 +232,7 @@ def clean_pipeline(
             "drop_exact_duplicates_after_winsorization",
             before,
             len(current),
-            "doublons créés par le plafonnement",
+            "duplicates created by capping",
         )
     current = current.drop(columns=["is_cancellation"])
     return current, summary

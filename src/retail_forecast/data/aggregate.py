@@ -1,4 +1,4 @@
-"""Agrégation des transactions nettoyées en séries calendaires."""
+"""Aggregate cleaned transactions into calendar series."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def _full_dates(config: Mapping[str, Any]) -> pd.DatetimeIndex:
 
 
 def _closed_dates(config: Mapping[str, Any]) -> set[pd.Timestamp]:
-    """Retourne les dates de fermeture déclarées dans la configuration."""
+    """Return closure dates declared in the configuration."""
     return {
         pd.Timestamp(date)
         for date in config["aggregation"].get("closure_dates", [])
@@ -24,7 +24,7 @@ def _closed_dates(config: Mapping[str, Any]) -> set[pd.Timestamp]:
 
 
 def daily_revenue(df: pd.DataFrame, config: Mapping[str, Any]) -> pd.DataFrame:
-    """Agrège le revenu sur chaque jour calendaire complet."""
+    """Aggregate revenue for each complete calendar day."""
     dates = _full_dates(config)
     work = df.copy()
     work["date"] = pd.to_datetime(work["InvoiceDate"]).dt.normalize()
@@ -45,7 +45,7 @@ def daily_revenue(df: pd.DataFrame, config: Mapping[str, Any]) -> pd.DataFrame:
     ] = False
     assert (
         result.loc[result["n_transactions"].gt(0), "is_trading_day"].all()
-    ), "Un jour avec transactions ne peut pas être classé fermé"
+    ), "A day with transactions cannot be classified as closed"
     result["is_partial_day"] = False
     return result[
         ["date", "revenue", "n_transactions", "is_trading_day", "is_partial_day"]
@@ -53,7 +53,7 @@ def daily_revenue(df: pd.DataFrame, config: Mapping[str, Any]) -> pd.DataFrame:
 
 
 def weekly_revenue(df: pd.DataFrame) -> pd.DataFrame:
-    """Agrège une série journalière et signale les semaines partielles."""
+    """Aggregate a daily series and flag partial weeks."""
     work = df.copy()
     work["date"] = pd.to_datetime(work["date"])
     periods = work["date"].dt.to_period("W-SUN")
@@ -74,7 +74,7 @@ def weekly_revenue(df: pd.DataFrame) -> pd.DataFrame:
 def detect_anomalous_days(
     daily: pd.DataFrame, window: int = 28, k: float = 5
 ) -> pd.DataFrame:
-    """Signale les écarts supérieurs à k fois la MAD mobile."""
+    """Flag deviations greater than k times the rolling MAD."""
     work = daily.copy()
     values = work["revenue"].astype(float)
     rolling_median = values.rolling(window, min_periods=window).median()

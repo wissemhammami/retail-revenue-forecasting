@@ -1,4 +1,4 @@
-"""Validation du schéma et des bornes des données brutes."""
+"""Validate the raw data schema and bounds."""
 
 from typing import Any
 
@@ -6,16 +6,16 @@ import pandas as pd
 
 
 def validate_raw(df: pd.DataFrame, expected: dict[str, Any]) -> dict[str, Any]:
-    """Valide le schéma, la cardinalité et la période des données brutes."""
+    """Validate the raw data schema, cardinality, and period."""
     expected_columns = list(expected["columns"])
     actual_columns = list(df.columns)
     if actual_columns != expected_columns:
         raise ValueError(
-            f"Colonnes invalides : attendu {expected_columns}, obtenu {actual_columns}"
+            f"Invalid columns: expected {expected_columns}, got {actual_columns}"
         )
     if len(df) != expected["n_rows"]:
         raise ValueError(
-            f"Nombre de lignes invalide : attendu {expected['n_rows']}, obtenu {len(df)}"
+            f"Invalid row count: expected {expected['n_rows']}, got {len(df)}"
         )
 
     dates = pd.to_datetime(df["InvoiceDate"], errors="coerce")
@@ -23,7 +23,7 @@ def validate_raw(df: pd.DataFrame, expected: dict[str, Any]) -> dict[str, Any]:
     maximum_exclusive = pd.Timestamp(expected["date_max"]) + pd.Timedelta(days=1)
     if dates.isna().any() or (dates < minimum).any() or (dates >= maximum_exclusive).any():
         raise ValueError(
-            "InvoiceDate hors plage : attendu "
+            "InvoiceDate out of range: expected "
             f"[{minimum.date()}, {maximum_exclusive.date()})"
         )
 

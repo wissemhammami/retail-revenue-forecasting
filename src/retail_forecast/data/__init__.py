@@ -1,1 +1,1 @@
-"""Chargement et validation des données retail."""
+"""Load and validate retail data."""

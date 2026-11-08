@@ -1,4 +1,4 @@
-"""Chargement de la configuration et des données brutes."""
+"""Load configuration and raw data."""
 
 from pathlib import Path
 from typing import Any
@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def load_config(path: str | Path | None = None) -> dict[str, Any]:
-    """Charge la configuration YAML et résout les chemins du projet."""
+    """Load the YAML configuration and resolve project paths."""
     config_path = Path(path) if path is not None else PROJECT_ROOT / "configs" / "config.yaml"
     config_path = config_path if config_path.is_absolute() else PROJECT_ROOT / config_path
     with config_path.open(encoding="utf-8") as stream:
@@ -22,7 +22,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def read_raw(config: dict[str, Any] | None = None) -> pd.DataFrame:
-    """Lit le CSV brut avec les types identifiants et les dates attendus."""
+    """Read the raw CSV with expected identifier types and dates."""
     config = config or load_config()
     raw_path = Path(config["paths"]["raw"]) / config["raw_filename"]
     return pd.read_csv(

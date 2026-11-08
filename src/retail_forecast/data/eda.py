@@ -1,4 +1,4 @@
-"""Fonctions d'analyse exploratoire sans effets graphiques."""
+"""Exploratory analysis functions without plotting side effects."""
 
 from __future__ import annotations
 
@@ -33,14 +33,14 @@ WEEKDAY_NAMES = {
 
 
 def _without_partial(frame: pd.DataFrame, date_column: str) -> pd.DataFrame:
-    """Retire le jour partiel de la fin de la source."""
+    """Remove the partial final day from the source."""
     result = frame.copy()
     dates = pd.to_datetime(result[date_column])
     return result.loc[dates.dt.normalize().ne(PARTIAL_DAY)].copy()
 
 
 def eda_summary(clean: pd.DataFrame, daily: pd.DataFrame) -> pd.DataFrame:
-    """Construit un résumé long par jour, mois, pays et produit."""
+    """Build a long summary by day, month, country, and product."""
     transactions = _without_partial(clean, "InvoiceDate")
     transactions["weekday"] = pd.to_datetime(transactions["InvoiceDate"]).dt.dayofweek.map(
         WEEKDAY_NAMES
@@ -124,7 +124,7 @@ def eda_summary(clean: pd.DataFrame, daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def weekday_profile(daily: pd.DataFrame) -> pd.DataFrame:
-    """Calcule moyenne, médiane et nombre de jours actifs par weekday."""
+    """Calculate mean, median, and active-day count by weekday."""
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"])
     work = work.loc[work["is_trading_day"].astype(bool)]
@@ -139,11 +139,11 @@ def weekday_profile(daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def decompose_weekly(daily: pd.DataFrame) -> DecomposeResult:
-    """Décompose les jours actifs sans interpoler les jours fermés.
+    """Decompose active days without interpolating closed days.
 
-    Les jours fermés et la fenêtre 2010-12-24 à 2011-01-03 sont retirés.
-    La saisonnalité est le profil moyen par jour de semaine et le résidu est
-    calculé autour d'une tendance roulante de sept observations actives.
+    Closed days and the 2010-12-24 to 2011-01-03 window are removed.
+    Seasonality is the average weekday profile and the residual is
+    calculated around a rolling trend of seven active observations.
     """
     work = daily.copy()
     work["date"] = pd.to_datetime(work["date"])
@@ -168,7 +168,7 @@ def decompose_weekly(daily: pd.DataFrame) -> DecomposeResult:
 def anomaly_details(
     clean: pd.DataFrame, anomalous_days: pd.DataFrame
 ) -> pd.DataFrame:
-    """Retourne les trois plus grosses transactions de chaque jour anormal."""
+    """Return the three largest transactions for each anomalous day."""
     transactions = _without_partial(clean, "InvoiceDate")
     transactions["date"] = pd.to_datetime(transactions["InvoiceDate"]).dt.normalize()
     anomaly_dates = pd.to_datetime(anomalous_days["date"]).dt.normalize()
@@ -194,7 +194,7 @@ def anomaly_details(
 
 
 def cleaning_impact(raw: pd.DataFrame, clean: pd.DataFrame) -> pd.DataFrame:
-    """Compare trois périmètres homogènes de lignes et de revenu."""
+    """Compare three homogeneous scopes of rows and revenue."""
     raw_work = raw.copy()
     raw_work["Revenue"] = raw_work["Quantity"] * raw_work["UnitPrice"]
     clean_work = clean.copy()
@@ -229,7 +229,7 @@ def cleaning_impact_steps(
     cleaning_summary: pd.DataFrame,
     config: dict[str, Any],
 ) -> pd.DataFrame:
-    """Calcule les lignes et revenus retirés à chaque étape du nettoyage."""
+    """Calculate rows and revenue removed at each cleaning step."""
     current = raw.copy()
     cleaning = config["cleaning"]
     rows: list[dict[str, Any]] = []
