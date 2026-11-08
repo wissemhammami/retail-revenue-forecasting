@@ -1,4 +1,4 @@
-"""Construit le résumé EDA exportable."""
+"""Build the exportable EDA summary."""
 
 from pathlib import Path
 import sys
@@ -12,14 +12,14 @@ from retail_forecast.data.load import load_config, read_raw
 
 
 def atomic_write(frame: pd.DataFrame, destination: Path) -> None:
-    """Écrit un CSV via un fichier temporaire."""
+    """Write a CSV through a temporary file."""
     temporary = destination.with_name(destination.name + ".part")
     frame.to_csv(temporary, index=False)
     temporary.replace(destination)
 
 
 def main() -> None:
-    """Génère le résumé EDA dans processed et dashboard_data."""
+    """Generate the EDA summary in processed and dashboard_data."""
     config = load_config()
     interim = Path(config["paths"]["interim"])
     processed = Path(config["paths"]["processed"])

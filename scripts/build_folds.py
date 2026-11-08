@@ -1,4 +1,4 @@
-"""Écrit les folds de développement et de test."""
+"""Write development and test folds."""
 
 from pathlib import Path
 import sys
@@ -12,7 +12,7 @@ from retail_forecast.evaluation.splits import build_folds, overlap_summary
 
 
 def main() -> None:
-    """Construit et affiche le découpage temporel."""
+    """Build and display the time split."""
     config = load_config()
     processed = Path(config["paths"]["processed"])
     daily = pd.read_csv(processed / "daily_revenue.csv", parse_dates=["date"])

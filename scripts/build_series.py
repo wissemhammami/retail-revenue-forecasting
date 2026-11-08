@@ -1,4 +1,4 @@
-"""Construit les séries journalière et hebdomadaire."""
+"""Build daily and weekly series."""
 
 from pathlib import Path
 import sys
@@ -16,14 +16,14 @@ from retail_forecast.data.load import load_config
 
 
 def atomic_write(frame: pd.DataFrame, destination: Path) -> None:
-    """Écrit atomiquement un CSV."""
+    """Write a CSV atomically."""
     temporary = destination.with_name(destination.name + ".part")
     frame.to_csv(temporary, index=False)
     temporary.replace(destination)
 
 
 def main() -> None:
-    """Construit et écrit les séries demandées."""
+    """Build and write the requested series."""
     config = load_config()
     interim = Path(config["paths"]["interim"])
     processed = Path(config["paths"]["processed"])

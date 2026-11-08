@@ -1,4 +1,4 @@
-"""Script d'évaluation en validation croisée (CV) et sélection du champion."""
+"""Cross-validation evaluation and champion selection script."""
 
 from __future__ import annotations
 
@@ -32,20 +32,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def format_prophet_params_id(params: dict[str, Any]) -> str:
-    """Formatte l'identifiant pour Prophet : prophet|cps=0.01|mode=additive."""
+    """Format the Prophet identifier: prophet|cps=0.01|mode=additive."""
     return f"prophet|cps={params['changepoint_prior_scale']}|mode={params['seasonality_mode']}"
 
 
 def format_xgb_params_id(params: dict[str, Any]) -> str:
-    """Formatte l'identifiant pour XGBoost : xgboost|depth=2|n_est=100|lr=0.03."""
+    """Format the XGBoost identifier: xgboost|depth=2|n_est=100|lr=0.03."""
     return f"xgboost|depth={params['max_depth']}|n_est={params['n_estimators']}|lr={params['learning_rate']}"
 
 
 def build_candidates_list(config: dict[str, Any]) -> list[dict[str, Any]]:
-    """Construit la liste ordonnée des 15 candidats."""
+    """Build the ordered list of 15 candidates."""
     candidates: list[dict[str, Any]] = []
 
-    # 1. Baseline
+    # 1. Baseline.
     candidates.append({
         "model": "baseline",
         "params_id": "baseline",
@@ -55,7 +55,7 @@ def build_candidates_list(config: dict[str, Any]) -> list[dict[str, Any]]:
         ),
     })
 
-    # 2. Prophet grid (6 combinaisons)
+    # 2. Prophet grid (6 combinations).
     p_grid = config["models"]["prophet"]["grid"]
     p_keys = list(p_grid.keys())
     for vals in itertools.product(*(p_grid[k] for k in p_keys)):
@@ -69,7 +69,7 @@ def build_candidates_list(config: dict[str, Any]) -> list[dict[str, Any]]:
             ),
         })
 
-    # 3. XGBoost grid (8 combinaisons)
+    # 3. XGBoost grid (8 combinations).
     x_grid = config["models"]["xgboost"]["grid"]
     x_keys = list(x_grid.keys())
     for vals in itertools.product(*(x_grid[k] for k in x_keys)):
@@ -90,24 +90,24 @@ def main() -> None:
     config = load_config(ROOT / "configs" / "config.yaml")
     daily_path = ROOT / "data" / "processed" / "daily_revenue.csv"
     if not daily_path.exists():
-        raise FileNotFoundError(f"Fichier introuvable: {daily_path}")
+        raise FileNotFoundError(f"File not found: {daily_path}")
 
     daily = pd.read_csv(daily_path, parse_dates=["date"])
 
-    # Construction et validation stricte des folds
+    # Build and strictly validate folds.
     dev_folds = build_folds(daily, config, "dev")
     if len(dev_folds) != 23:
-        raise ValueError(f"Attendu 23 folds de dev, obtenu {len(dev_folds)}")
+        raise ValueError(f"Expected 23 development folds, got {len(dev_folds)}")
     for f in dev_folds:
         if f["kind"] != "dev":
-            raise ValueError(f"Fold non 'dev' détecté: kind={f['kind']}, origin={f['origin']}")
+            raise ValueError(f"Non-development fold detected: kind={f['kind']}, origin={f['origin']}")
 
     buckets = config["evaluation"]["horizon_buckets"]
     candidates = build_candidates_list(config)
     if len(candidates) != 15:
-        raise ValueError(f"Attendu 15 candidats, obtenu {len(candidates)}")
+        raise ValueError(f"Expected 15 candidates, got {len(candidates)}")
 
-    print(f"Lancement de la validation croisée sur {len(dev_folds)} folds de développement pour {len(candidates)} candidats...")
+    print(f"Starting cross-validation on {len(dev_folds)} development folds for {len(candidates)} candidates...")
 
     eval_results = []
     per_origin_records = []
@@ -117,29 +117,29 @@ def main() -> None:
         m_name = cand["model"]
         p_id = cand["params_id"]
         fn = cand["forecast_fn"]
-        print(f"[{idx:02d}/15] Évaluation de {p_id:42s} ... ", end="", flush=True)
+        print(f"[{idx:02d}/15] Evaluating {p_id:42s} ... ", end="", flush=True)
 
         t0 = time.perf_counter()
         bt_df = run_backtest(fn, daily, dev_folds, config)
         elapsed = time.perf_counter() - t0
 
         if len(bt_df) != 23 * 28:
-            raise ValueError(f"Taille de backtest inattendue ({len(bt_df)}) pour {p_id}")
+            raise ValueError(f"Unexpected backtest size ({len(bt_df)}) for {p_id}")
 
-        # Métriques poolées
+        # Pooled metrics.
         pooled_wape = wape(bt_df["actual"], bt_df["prediction"])
         pooled_mae = mae(bt_df["actual"], bt_df["prediction"])
         pooled_rmse = rmse(bt_df["actual"], bt_df["prediction"])
         pooled_bias = bias(bt_df["actual"], bt_df["prediction"])
 
-        # Tranches d'horizon
+        # Horizon buckets.
         bt_df["bucket"] = [horizon_bucket(h, buckets) for h in bt_df["horizon"]]
         b_summary = summarize(bt_df, by="bucket").set_index("bucket")
         wape_1_7 = float(b_summary.loc["1-7", "wape"])
         wape_8_14 = float(b_summary.loc["8-14", "wape"])
         wape_15_28 = float(b_summary.loc["15-28", "wape"])
 
-        # WAPE par origine
+        # WAPE by origin.
         po_df = per_origin_wape(bt_df)
         po_df["model"] = m_name
         po_df["params_id"] = p_id
@@ -153,24 +153,24 @@ def main() -> None:
             })
 
         if m_name == "baseline":
-            # Contrôle de régression
+            # Regression check.
             expected_wape = 0.3620
             expected_mae = 7937.11
             expected_bias = -360.31
             if abs(pooled_wape - expected_wape) > 0.0005:
-                raise ValueError(f"Régression WAPE baseline: {pooled_wape:.4f} != {expected_wape}")
+                raise ValueError(f"Baseline WAPE regression: {pooled_wape:.4f} != {expected_wape}")
             if abs(pooled_mae - expected_mae) > 1.0:
-                raise ValueError(f"Régression MAE baseline: {pooled_mae:.2f} != {expected_mae}")
+                raise ValueError(f"Baseline MAE regression: {pooled_mae:.2f} != {expected_mae}")
             if abs(pooled_bias - expected_bias) > 1.0:
-                raise ValueError(f"Régression Biais baseline: {pooled_bias:.2f} != {expected_bias}")
+                raise ValueError(f"Baseline bias regression: {pooled_bias:.2f} != {expected_bias}")
             baseline_per_origin_df = po_df.copy()
             n_better = 0
         else:
             if baseline_per_origin_df is None:
-                raise RuntimeError("La baseline doit être évaluée en premier")
+                raise RuntimeError("The baseline must be evaluated first")
             n_better = count_better_origins(po_df, baseline_per_origin_df)
 
-        print(f"Terminé en {elapsed:5.1f}s | WAPE: {pooled_wape:.4f} | Better origins: {n_better:2d}/23")
+        print(f"Completed in {elapsed:5.1f}s | WAPE: {pooled_wape:.4f} | Better origins: {n_better:2d}/23")
 
         eval_results.append({
             "model": m_name,
@@ -188,9 +188,9 @@ def main() -> None:
             "po_df": po_df,
         })
 
-    # Identification du best_for_model (WAPE poolé le plus bas)
-    # Règle : Choix des paramètres d'un modèle = WAPE poolé le plus bas sur sa grille ;
-    # en cas d'égalité, la première combinaison dans l'ordre de la grille.
+    # Identify best_for_model (lowest pooled WAPE).
+    # Rule: choose a model's parameters by the lowest pooled WAPE on its grid;
+    # on ties, use the first combination in grid order.
     df_results = pd.DataFrame(eval_results)
     df_results["best_for_model"] = False
 
@@ -199,7 +199,7 @@ def main() -> None:
 
     for m in ["prophet", "xgboost"]:
         sub = df_results[df_results["model"] == m]
-        # min() stable grâce à l'ordre conservé
+        # min() is stable because order is preserved.
         min_wape = sub["wape"].min()
         best_idx = sub[sub["wape"] == min_wape].index[0]
         df_results.loc[best_idx, "best_for_model"] = True
@@ -208,7 +208,7 @@ def main() -> None:
         else:
             best_xgb_row = df_results.loc[best_idx]
 
-    # Qualification des meilleurs challengers face à la baseline
+    # Qualify the best challengers against the baseline.
     baseline_row = df_results[df_results["model"] == "baseline"].iloc[0]
     baseline_wape = float(baseline_row["wape"])
 
@@ -235,7 +235,7 @@ def main() -> None:
     champion_name = champ_selection["champion_name"]
     rule_applied = champ_selection["rule_applied"]
 
-    # Export cv_results.csv (15 lignes, aucune colonne de durée)
+    # Export cv_results.csv (15 rows, no duration column).
     cols_cv_results = [
         "model",
         "params_id",
@@ -253,21 +253,21 @@ def main() -> None:
     cv_results_export = df_results[cols_cv_results].copy()
     cv_results_path = ROOT / "data" / "processed" / "cv_results.csv"
     cv_results_export.to_csv(cv_results_path, index=False)
-    print(f"Écrit : {cv_results_path} ({len(cv_results_export)} lignes)")
+    print(f"Wrote: {cv_results_path} ({len(cv_results_export)} rows)")
 
-    # Export cv_per_origin.csv (15 x 23 = 345 lignes)
+    # Export cv_per_origin.csv (15 x 23 = 345 rows).
     df_per_origin = pd.DataFrame(per_origin_records)[["model", "params_id", "origin", "wape"]]
     cv_per_origin_path = ROOT / "data" / "processed" / "cv_per_origin.csv"
     df_per_origin.to_csv(cv_per_origin_path, index=False)
-    print(f"Écrit : {cv_per_origin_path} ({len(df_per_origin)} lignes)")
+    print(f"Wrote: {cv_per_origin_path} ({len(df_per_origin)} rows)")
 
-    # Export configs/best_params.json
+    # Export configs/best_params.json.
     best_params_json_content = {
         "rule": (
-            "Prophet ou XGBoost ne remplace la baseline que s'il a un WAPE moyen inférieur à la baseline "
-            "ET un WAPE par origine inférieur sur la majorité des origines (>= 12 sur 23). "
-            "Entre deux challengers qualifiés, le WAPE moyen le plus bas l'emporte. "
-            "Si aucun n'est qualifié, la baseline est championne ('une règle simple suffit')."
+            "Prophet or XGBoost replaces the baseline only if it has lower mean WAPE than the baseline "
+            "AND lower WAPE by origin on a majority of origins (>= 12 of 23). "
+            "Among qualified challengers, the lowest mean WAPE wins. "
+            "If none qualifies, the baseline is champion ('a simple rule is enough')."
         ),
         "rule_applied": rule_applied,
         "champion": champion_name,
@@ -297,7 +297,7 @@ def main() -> None:
             "qualified": bool(prophet_is_qual),
             "qualification_reason": (
                 f"WAPE {best_prophet_row['wape']:.4f} {'<' if best_prophet_row['wape'] < baseline_wape else '>='} {baseline_wape:.4f} "
-                f"et {best_prophet_row['n_origins_better_than_baseline']}/23 origines meilleures (seuil: 12)"
+                f"and {best_prophet_row['n_origins_better_than_baseline']}/23 better origins (threshold: 12)"
             ),
         },
         "xgboost": {
@@ -315,7 +315,7 @@ def main() -> None:
             "qualified": bool(xgb_is_qual),
             "qualification_reason": (
                 f"WAPE {best_xgb_row['wape']:.4f} {'<' if best_xgb_row['wape'] < baseline_wape else '>='} {baseline_wape:.4f} "
-                f"et {best_xgb_row['n_origins_better_than_baseline']}/23 origines meilleures (seuil: 12)"
+                f"and {best_xgb_row['n_origins_better_than_baseline']}/23 better origins (threshold: 12)"
             ),
         },
     }
@@ -323,7 +323,7 @@ def main() -> None:
     best_params_path = ROOT / "configs" / "best_params.json"
     with open(best_params_path, "w", encoding="utf-8") as f:
         json.dump(best_params_json_content, f, indent=2, ensure_ascii=False)
-    print(f"Écrit : {best_params_path}")
+    print(f"Wrote: {best_params_path}")
 
 
 if __name__ == "__main__":

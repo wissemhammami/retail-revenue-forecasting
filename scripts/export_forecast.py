@@ -1,4 +1,4 @@
-"""Exporte la prévision Prophet figée et son intervalle empirique."""
+"""Export the frozen Prophet forecast and its empirical interval."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _bucket(value: int, buckets: list[list[int]]) -> str:
     for start, end in buckets:
         if int(start) <= int(value) <= int(end):
             return f"{start}-{end}"
-    raise ValueError(f"Horizon hors des tranches configurées: {value}")
+    raise ValueError(f"Horizon outside configured buckets: {value}")
 
 
 def _forecast_function(model: str, params: dict) -> callable:
@@ -41,7 +41,7 @@ def _forecast_function(model: str, params: dict) -> callable:
         return lambda frame, origin, horizon, config: xgb_forecast(
             frame, origin, horizon, config, params=params
         )
-    raise ValueError(f"Modèle champion inconnu: {model}")
+    raise ValueError(f"Unknown champion model: {model}")
 
 
 def _calibrate_intervals(
@@ -62,7 +62,7 @@ def _calibrate_intervals(
     missing = [name for name in expected_buckets if counts.get(name, 0) < minimum_count]
     if missing:
         raise ValueError(
-            "Résidus de calibration insuffisants pour: "
+            "Insufficient calibration residuals for: "
             + ", ".join(missing)
         )
     quantiles = (
@@ -77,21 +77,21 @@ def _calibrate_intervals(
 def _validate_forecast(export: pd.DataFrame, horizon: int) -> None:
     expected_columns = ["date", "forecast", "lower_80", "upper_80", "reliable"]
     if list(export.columns) != expected_columns:
-        raise ValueError(f"Colonnes forecast.csv inattendues: {list(export.columns)}")
+        raise ValueError(f"Unexpected forecast.csv columns: {list(export.columns)}")
     if len(export) != horizon:
-        raise ValueError(f"Horizon inattendu: {len(export)} lignes, attendu {horizon}")
+        raise ValueError(f"Unexpected horizon: {len(export)} rows, expected {horizon}")
     if not pd.api.types.is_bool_dtype(export["reliable"]):
-        raise ValueError("forecast.csv contient une colonne reliable non booléenne")
+        raise ValueError("forecast.csv contains a non-boolean reliable column")
     if export["date"].duplicated().any() or not export["date"].is_monotonic_increasing:
-        raise ValueError("Les dates de forecast.csv doivent être uniques et chronologiques")
+        raise ValueError("forecast.csv dates must be unique and chronological")
     values = export[["forecast", "lower_80", "upper_80"]]
     if values.isna().any().any() or not np.isfinite(values.to_numpy()).all():
-        raise ValueError("forecast.csv contient des valeurs manquantes ou non finies")
+        raise ValueError("forecast.csv contains missing or non-finite values")
     if (
         (export["lower_80"] > export["forecast"]).any()
         or (export["forecast"] > export["upper_80"]).any()
     ):
-        raise ValueError("Intervalles invalides: lower_80 <= forecast <= upper_80 requis")
+        raise ValueError("Invalid intervals: lower_80 <= forecast <= upper_80 required")
 
 
 def main() -> None:
@@ -148,14 +148,14 @@ def main() -> None:
         ROOT / "dashboard_data" / "history.csv", index=False
     )
     print(f"Champion: {champion}")
-    print("Comptages de calibration: " + ", ".join(
+    print("Calibration counts: " + ", ".join(
         f"{bucket}={count}" for bucket, count in counts.items()
     ))
-    print("Couverture diagnostique dev: " + ", ".join(
+    print("Development diagnostic coverage: " + ", ".join(
         f"{bucket}={coverage[bucket]:.4f}" for bucket in coverage.index
     ))
-    print(f"Écrit : {ROOT / 'dashboard_data' / 'forecast.csv'} ({len(output)} lignes)")
-    print(f"Écrit : {ROOT / 'dashboard_data' / 'history.csv'} (180 lignes)")
+    print(f"Wrote: {ROOT / 'dashboard_data' / 'forecast.csv'} ({len(output)} rows)")
+    print(f"Wrote: {ROOT / 'dashboard_data' / 'history.csv'} (180 rows)")
 
 
 if __name__ == "__main__":

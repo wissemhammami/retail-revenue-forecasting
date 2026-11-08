@@ -1,4 +1,4 @@
-"""Acquisition et validation du jeu de données UCI Online Retail."""
+"""Acquire and validate the UCI Online Retail dataset."""
 
 from pathlib import Path
 import sys
@@ -14,7 +14,7 @@ from retail_forecast.data.validate import validate_raw
 
 
 def download_xlsx(url: str, destination: Path) -> None:
-    """Télécharge un fichier avec reprises et remplacement atomique."""
+    """Download a file with retries and atomic replacement."""
     temporary = destination.with_name(destination.name + ".part")
     last_error: Exception | None = None
     for attempt in range(1, 4):
@@ -26,7 +26,7 @@ def download_xlsx(url: str, destination: Path) -> None:
                         if chunk:
                             stream.write(chunk)
             temporary.replace(destination)
-            print(f"Taille téléchargée : {destination.stat().st_size} octets")
+            print(f"Downloaded size: {destination.stat().st_size} bytes")
             return
         except (OSError, requests.RequestException) as error:
             last_error = error
@@ -35,12 +35,12 @@ def download_xlsx(url: str, destination: Path) -> None:
             if attempt < 3:
                 time.sleep(1)
     raise RuntimeError(
-        f"Échec du téléchargement après 3 tentatives : {last_error}"
+        f"Download failed after 3 attempts: {last_error}"
     ) from last_error
 
 
 def main() -> None:
-    """Construit le CSV brut sans réécrire un CSV déjà valide."""
+    """Build the raw CSV without rewriting an already valid CSV."""
     config = load_config()
     raw_dir = Path(config["paths"]["raw"])
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -57,13 +57,13 @@ def main() -> None:
                 ),
                 expected,
             )
-            print("CSV existant valide ; aucune réécriture.")
+            print("Existing CSV is valid; no rewrite needed.")
             print(summary)
             return
         except (OSError, ValueError, pd.errors.ParserError) as error:
             backup = csv_path.with_name(csv_path.name + ".bak")
             csv_path.replace(backup)
-            print(f"CSV invalide renommé en {backup}: {error}")
+            print(f"Invalid CSV renamed to {backup}: {error}")
 
     xlsx_path = raw_dir / config["source"]["xlsx_filename"]
     if not xlsx_path.exists():
@@ -71,8 +71,8 @@ def main() -> None:
             download_xlsx(config["source"]["url"], xlsx_path)
         except RuntimeError as error:
             raise SystemExit(
-                f"{error}\nTéléchargez '{xlsx_path.name}' depuis "
-                f"{config['source']['url']} et placez-le dans '{raw_dir}'."
+                f"{error}\nDownload '{xlsx_path.name}' from "
+                f"{config['source']['url']} and place it in '{raw_dir}'."
             ) from error
 
     frame = pd.read_excel(xlsx_path, engine="openpyxl")
@@ -81,7 +81,7 @@ def main() -> None:
     frame.to_csv(temporary, index=False)
     temporary.replace(csv_path)
     print(summary)
-    print(f"CSV créé : {csv_path}")
+    print(f"CSV created: {csv_path}")
 
 
 if __name__ == "__main__":

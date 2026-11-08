@@ -1,4 +1,4 @@
-"""Écrit les features historiques."""
+"""Write historical features."""
 
 from pathlib import Path
 import sys
@@ -13,14 +13,14 @@ from retail_forecast.features.build_features import build_features
 
 
 def atomic_write(frame: pd.DataFrame, destination: Path) -> None:
-    """Écrit un CSV puis le renomme atomiquement."""
+    """Write a CSV and rename it atomically."""
     temporary = destination.with_name(destination.name + ".part")
     frame.to_csv(temporary, index=True, index_label="date")
     temporary.replace(destination)
 
 
 def main() -> None:
-    """Construit features.csv à partir de la série journalière."""
+    """Build features.csv from the daily series."""
     config = load_config()
     processed = Path(config["paths"]["processed"])
     daily = pd.read_csv(processed / "daily_revenue.csv", parse_dates=["date"])

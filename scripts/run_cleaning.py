@@ -1,4 +1,4 @@
-"""Exécute le nettoyage et écrit les artefacts intermédiaires."""
+"""Run cleaning and write intermediate artifacts."""
 
 from pathlib import Path
 import sys
@@ -23,14 +23,14 @@ from retail_forecast.data.load import load_config, read_raw
 
 
 def atomic_write_csv(frame: pd.DataFrame, destination: Path) -> None:
-    """Écrit un CSV par fichier temporaire puis remplacement atomique."""
+    """Write a CSV through a temporary file and atomically replace it."""
     temporary = destination.with_name(destination.name + ".part")
     frame.to_csv(temporary, index=False)
     temporary.replace(destination)
 
 
 def main() -> None:
-    """Nettoie le CSV brut et affiche le journal d'audit."""
+    """Clean the raw CSV and display the audit log."""
     config = load_config()
     raw = read_raw(config)
     cleaned, summary = clean_pipeline(raw, config)

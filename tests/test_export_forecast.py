@@ -48,7 +48,7 @@ def test_calibration_rejects_insufficient_bucket():
             "prediction": [1, 2],
         }
     )
-    with pytest.raises(ValueError, match="insuffisants"):
+    with pytest.raises(ValueError, match="Insufficient calibration residuals"):
         _calibrate_intervals(frame, CONFIG, BUCKETS, minimum_count=2)
 
 
@@ -66,12 +66,12 @@ def test_forecast_validation_checks_contract_dates_and_ordering():
 
     invalid = valid.copy()
     invalid.loc[1, "lower_80"] = 21.0
-    with pytest.raises(ValueError, match="Intervalles"):
+    with pytest.raises(ValueError, match="Invalid intervals"):
         _validate_forecast(invalid, 2)
 
     missing = valid.copy()
     missing.loc[0, "forecast"] = None
-    with pytest.raises(ValueError, match="manquantes"):
+    with pytest.raises(ValueError, match="missing or non-finite"):
         _validate_forecast(missing, 2)
 
 

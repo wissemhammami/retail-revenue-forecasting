@@ -1,4 +1,4 @@
-"""Évalue les trois modèles figés sur les folds de test."""
+"""Evaluate the three frozen models on the test folds."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def _metrics(frame: pd.DataFrame, prefix: str = "") -> dict[str, float]:
 def main() -> None:
     test_results_path = ROOT / "data" / "processed" / "test_results.csv"
     if test_results_path.exists():
-        raise FileExistsError(f"Refus d'écraser le fichier existant: {test_results_path}")
+        raise FileExistsError(f"Refusing to overwrite existing file: {test_results_path}")
 
     config = load_config(ROOT / "configs" / "config.yaml")
     daily_path = ROOT / "data" / "processed" / "daily_revenue.csv"
@@ -42,9 +42,9 @@ def main() -> None:
 
     test_folds = build_folds(daily, config, "test")
     if len(test_folds) != 11:
-        raise ValueError(f"Attendu 11 folds de test, obtenu {len(test_folds)}")
+        raise ValueError(f"Expected 11 test folds, got {len(test_folds)}")
     if any(fold["kind"] != "test" for fold in test_folds):
-        raise ValueError("Tous les folds doivent être de kind 'test'")
+        raise ValueError("All folds must have kind 'test'")
 
     models: list[tuple[str, Callable[..., pd.DataFrame]]] = [
         (
@@ -140,13 +140,13 @@ def main() -> None:
         columns=["model", "horizon_bucket", "MAE", "RMSE", "WAPE", "bias"],
     ).to_csv(metrics_path, index=False)
 
-    print(f"Écrit : {test_results_path} ({len(result_rows)} lignes)")
-    print(f"Écrit : {test_per_origin_path} ({len(origin_rows)} lignes)")
-    print(f"Écrit : {detailed_path} ({len(detailed)} lignes)")
-    print(f"Écrit : {metrics_path} ({len(metric_rows)} lignes)")
-    print("WAPE poolé par régime")
+    print(f"Wrote: {test_results_path} ({len(result_rows)} rows)")
+    print(f"Wrote: {test_per_origin_path} ({len(origin_rows)} rows)")
+    print(f"Wrote: {detailed_path} ({len(detailed)} rows)")
+    print(f"Wrote: {metrics_path} ({len(metric_rows)} rows)")
+    print("Pooled WAPE by regime")
     for regime in ("normal", "montee_novembre", "decembre"):
-        print(f"régime={regime}")
+        print(f"regime={regime}")
         for model_name, backtest in backtests.items():
             regime_frame = backtest[backtest["regime"] == regime]
             print(f"  {model_name}: {wape(regime_frame['actual'], regime_frame['prediction']):.10f}")
@@ -154,7 +154,7 @@ def main() -> None:
     baseline_wape = (
         pd.DataFrame(origin_rows).query("model == 'baseline'").set_index("origin")["wape"]
     )
-    print("Origines strictement meilleures que la baseline")
+    print("Origins strictly better than the baseline")
     for model_name in ("prophet", "xgboost"):
         challenger_wape = (
             pd.DataFrame(origin_rows).query(f"model == '{model_name}'").set_index("origin")["wape"]
@@ -172,8 +172,8 @@ def main() -> None:
     )
     confirmed = prophet_pool < baseline_pool and prophet_better >= 6
     print(
-        "Verdict Prophet: "
-        + ("confirmé sur test" if confirmed else "non confirmé sur test")
+        "Prophet verdict: "
+        + ("confirmed on test" if confirmed else "not confirmed on test")
     )
 
 
