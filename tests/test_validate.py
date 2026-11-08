@@ -47,4 +47,4 @@ def test_invalid_frame_raises(expected, change):
 def test_load_config_resolves_paths():
     config = load_config()
     assert all(pd.io.common.is_url(value) is False for value in config["paths"].values())
-    assert all(str(value).endswith(("data\\raw", "data\\interim", "data\\processed")) for value in config["paths"].values())
+    assert all(str(value).replace("\\", "/").endswith(("data/raw", "data/interim", "data/processed")) for value in config["paths"].values())
