@@ -1,4 +1,4 @@
-"""Presentation dashboard for the precomputed retail revenue forecasts."""
+"""Minimal presentation dashboard for precomputed retail revenue forecasts."""
 
 from __future__ import annotations
 
@@ -17,22 +17,29 @@ CONFIG_PATH = ROOT / "configs" / "config.yaml"
 REQUIRED_FORECAST = {"date", "forecast", "lower_80", "upper_80", "reliable"}
 REQUIRED_HISTORY = {"date", "revenue"}
 REQUIRED_METRICS = {"model", "wape", "mae", "rmse", "bias"}
+REGIME_LABELS = {
+    "montee_novembre": "November ramp-up",
+    "november_ramp": "November ramp-up",
+    "decembre": "December",
+    "december": "December",
+    "normal": "Normal",
+}
 
 
 def _read_csv(name: str, required: set[str], dates: list[str] | None = None) -> pd.DataFrame:
     path = DATA_DIR / name
     if not path.exists():
-        raise FileNotFoundError(f"Export requis absent : {path}")
+        raise FileNotFoundError(f"Missing export: {path}")
     frame = pd.read_csv(path, parse_dates=dates or [])
     missing = required - set(frame.columns)
     if missing:
-        raise ValueError(f"{path.name} : colonnes manquantes : {', '.join(sorted(missing))}")
+        raise ValueError(f"{path.name}: missing columns: {', '.join(sorted(missing))}")
     return frame
 
 
 def _load_config() -> dict:
     if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f"Configuration absente : {CONFIG_PATH}")
+        raise FileNotFoundError(f"Missing configuration: {CONFIG_PATH}")
     with CONFIG_PATH.open(encoding="utf-8") as handle:
         return yaml.safe_load(handle)
 
@@ -46,39 +53,39 @@ def _validate_forecast_data(
     ).normalize())
     for frame, label in ((forecast, "forecast"), (history, "history")):
         if frame["date"].isna().any():
-            raise ValueError(f"{label} contient des dates invalides")
+            raise ValueError(f"{label} contains invalid dates")
         if frame["date"].duplicated().any():
-            raise ValueError(f"{label} contient des dates dupliquées")
+            raise ValueError(f"{label} contains duplicate dates")
         if not frame["date"].is_monotonic_increasing:
-            raise ValueError(f"{label} doit être chronologique")
+            raise ValueError(f"{label} must be chronological")
     if len(forecast) != horizon:
-        raise ValueError(f"Horizon inattendu : {len(forecast)} lignes, attendu {horizon}")
+        raise ValueError(f"Unexpected horizon: {len(forecast)} rows, expected {horizon}")
     if forecast["date"].diff().dropna().ne(pd.Timedelta(days=1)).any():
-        raise ValueError("Les dates de prévision doivent être consécutives")
+        raise ValueError("Forecast dates must be consecutive")
     if forecast["date"].min() != history["date"].max() + pd.Timedelta(days=1):
-        raise ValueError("La prévision doit commencer le lendemain de l'historique")
+        raise ValueError("Forecast must start the day after history")
     if history["date"].isin(forecast["date"]).any():
-        raise ValueError("Chevauchement entre historique et prévision")
+        raise ValueError("History and forecast overlap")
     numeric_forecast = ["forecast", "lower_80", "upper_80"]
     if forecast[numeric_forecast].isna().any().any():
-        raise ValueError("forecast.csv contient des valeurs manquantes ou non numériques")
+        raise ValueError("forecast.csv contains missing or non-numeric values")
     if history["revenue"].isna().any():
-        raise ValueError("L'historique contient des valeurs manquantes ou non numériques")
+        raise ValueError("History contains missing or non-numeric values")
     if not forecast[numeric_forecast].apply(
         lambda column: pd.to_numeric(column, errors="coerce").notna().all()
     ).all():
-        raise ValueError("forecast.csv contient des valeurs non numériques")
+        raise ValueError("forecast.csv contains non-numeric values")
     if not pd.api.types.is_bool_dtype(forecast["reliable"]):
-        raise ValueError("forecast.csv contient une colonne reliable non booléenne")
+        raise ValueError("forecast.csv contains a non-boolean reliable column")
     if not pd.to_numeric(history["revenue"], errors="coerce").notna().all():
-        raise ValueError("L'historique contient des valeurs non numériques")
+        raise ValueError("History contains non-numeric values")
     if (forecast["lower_80"] > forecast["forecast"]).any() or (
         forecast["forecast"] > forecast["upper_80"]
     ).any():
-        raise ValueError("Les bornes doivent respecter lower_80 <= forecast <= upper_80")
+        raise ValueError("Bounds must satisfy lower_80 <= forecast <= upper_80")
     closed = forecast["date"].dt.dayofweek.eq(5) | forecast["date"].isin(closure_dates)
     if forecast.loc[closed, numeric_forecast].ne(0).any().any():
-        raise ValueError("Les jours fermés connus doivent avoir forecast et bornes à zéro")
+        raise ValueError("Known closed days must have zero forecast and bounds")
     return forecast, history
 
 
@@ -88,7 +95,6 @@ def _validate_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, str]:
     history_name = "daily_revenue.csv" if (DATA_DIR / "daily_revenue.csv").exists() else "history.csv"
     history = _read_csv(history_name, REQUIRED_HISTORY, ["date"])
     metrics = _read_csv("test_results.csv", REQUIRED_METRICS)
-
     for frame in (forecast, history):
         frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
     for column in ["forecast", "lower_80", "upper_80"]:
@@ -96,22 +102,20 @@ def _validate_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, str]:
     history["revenue"] = pd.to_numeric(history["revenue"], errors="coerce")
     _validate_forecast_data(forecast, history, config)
     forecast = forecast.sort_values("date").reset_index(drop=True)
-    forecast = forecast.loc[forecast["reliable"]].reset_index(drop=True)
     history = history.sort_values("date").reset_index(drop=True)
     for column in REQUIRED_METRICS - {"model"}:
         metrics[column] = pd.to_numeric(metrics[column], errors="coerce")
     if metrics[list(REQUIRED_METRICS - {"model"})].isna().any().any():
-        raise ValueError("test_results.csv contient des métriques invalides")
-
+        raise ValueError("test_results.csv contains invalid metrics")
     params_path = DATA_DIR / "best_params.json"
     if not params_path.exists():
         params_path = ROOT / "configs" / "best_params.json"
     if not params_path.exists():
-        raise FileNotFoundError(f"Paramètres du champion absents : {params_path}")
+        raise FileNotFoundError(f"Missing champion parameters: {params_path}")
     with params_path.open(encoding="utf-8") as handle:
         champion = json.load(handle).get("champion")
     if not champion:
-        raise ValueError("Le champion est absent des paramètres exportés")
+        raise ValueError("Champion is missing from exported parameters")
     return forecast, history, metrics, str(champion)
 
 
@@ -124,13 +128,17 @@ def _gbp(value: float) -> str:
     return f"£{value:,.0f}"
 
 
+def _humanize_regime(value: str) -> str:
+    return REGIME_LABELS.get(value, value.replace("_", " ").capitalize())
+
+
 def _forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame) -> go.Figure:
     first_forecast = forecast["date"].min()
-    plotted_history = history.loc[history["date"] < first_forecast]
+    plotted_history = history.loc[history["date"] < first_forecast].tail(90)
     figure = go.Figure()
     figure.add_trace(go.Scatter(
-        x=plotted_history["date"], y=plotted_history["revenue"],
-        mode="lines", name="Historique", line={"color": "#2F6B9A", "width": 2},
+        x=plotted_history["date"], y=plotted_history["revenue"], mode="lines",
+        name="History", line={"color": "#111827", "width": 2},
         hovertemplate="%{x|%d %b %Y}<br>£%{y:,.0f}<extra></extra>",
     ))
     figure.add_trace(go.Scatter(
@@ -139,113 +147,146 @@ def _forecast_chart(history: pd.DataFrame, forecast: pd.DataFrame) -> go.Figure:
     ))
     figure.add_trace(go.Scatter(
         x=forecast["date"], y=forecast["lower_80"], mode="lines",
-        fill="tonexty", fillcolor="rgba(67, 160, 160, 0.18)",
-        line={"width": 0}, name="Intervalle 80 %", hoverinfo="skip",
+        fill="tonexty", fillcolor="rgba(37, 99, 235, 0.15)",
+        line={"width": 0}, name="80% interval", hoverinfo="skip",
     ))
     figure.add_trace(go.Scatter(
-        x=forecast["date"], y=forecast["forecast"], mode="lines+markers",
-        name="Prévision", line={"color": "#159A9C", "width": 2.5},
-        marker={"size": 4},
+        x=forecast["date"], y=forecast["forecast"], mode="lines",
+        name="Forecast", line={"color": "#2563EB", "width": 2.5},
         hovertemplate="%{x|%d %b %Y}<br>£%{y:,.0f}<extra></extra>",
     ))
-    figure.add_vline(x=first_forecast, line_dash="dash", line_color="#1F3A5F")
+    for reliable, label, color in [(True, "Reliable", "#2563EB"), (False, "Low confidence", "#93C5FD")]:
+        points = forecast.loc[forecast["reliable"].eq(reliable)]
+        if not points.empty:
+            figure.add_trace(go.Scatter(
+                x=points["date"], y=points["forecast"], mode="markers", name=label,
+                marker={"size": 6, "color": color},
+                hovertemplate="%{x|%d %b %Y}<br>£%{y:,.0f}<extra></extra>",
+            ))
+    zero = forecast["forecast"].eq(0).tolist()
+    start = None
+    for index, is_zero in enumerate(zero + [False]):
+        if is_zero and start is None:
+            start = index
+        elif start is not None:
+            if index - start >= 3:
+                figure.add_vrect(
+                    x0=forecast.iloc[start]["date"], x1=forecast.iloc[index - 1]["date"],
+                    fillcolor="#F3F4F6", opacity=0.8, line_width=0,
+                    annotation_text="Closure", annotation_position="top left",
+                )
+            start = None
+    figure.add_vline(x=first_forecast, line_dash="dash", line_color="#6B7280")
     figure.update_layout(
-        height=430, margin={"l": 10, "r": 10, "t": 20, "b": 10},
-        plot_bgcolor="white", paper_bgcolor="white", hovermode="x unified",
-        legend={"orientation": "h", "y": 1.08, "x": 0},
+        template="plotly_white", height=430,
+        margin={"l": 10, "r": 10, "t": 30, "b": 10},
+        hovermode="x unified", font={"family": "system-ui"},
+        legend={"orientation": "h", "y": 1.12, "x": 0},
         xaxis={"title": None, "showgrid": False},
-        yaxis={"title": "Revenu (£)", "tickprefix": "£", "showgrid": True,
-               "gridcolor": "#E8EDF2"},
+        yaxis={"title": "Revenue (£)", "tickprefix": "£", "showgrid": True,
+               "gridcolor": "#E5E7EB"},
     )
     return figure
 
 
-def _overview(forecast: pd.DataFrame, history: pd.DataFrame, metrics: pd.DataFrame, champion: str) -> None:
-    st.header("Executive Overview")
-    if "is_trading_day" in history:
-        trading_mask = history["is_trading_day"].fillna(False).astype(bool)
-    else:
-        trading_mask = pd.Series(True, index=history.index)
-    trading = history.loc[trading_mask]
-    best_day = trading.loc[trading["revenue"].idxmax()]
-    cards = st.columns(5)
-    values = [
-        ("Total historique", history["revenue"].sum()),
-        ("Moyenne journalière", history["revenue"].mean()),
-        ("Prévision 7 jours", forecast.head(7)["forecast"].sum()),
-        ("Prévision fiable", forecast["forecast"].sum()),
-    ]
-    for card, (label, value) in zip(cards[:4], values):
-        card.metric(label, _gbp(value))
-    cards[4].metric("Meilleur jour ouvré", f"{best_day['date']:%d %b %Y}")
-    cards[4].caption(f"Revenu : {_gbp(best_day['revenue'])}")
-    left, right = st.columns([2.4, 1])
-    with left:
-        st.plotly_chart(_forecast_chart(history, forecast), width="stretch")
-    with right:
-        st.subheader("Résumé de prévision")
-        st.metric("Total prévision fiable", _gbp(forecast["forecast"].sum()))
-        st.caption(
-            f"Intervalle agrégé approximatif : {_gbp(forecast['lower_80'].sum())} – "
-            f"{_gbp(forecast['upper_80'].sum())}"
-        )
-        st.write(f"Modèle retenu : **{champion.title()}**")
-        st.caption("Les intervalles représentent une incertitude empirique, pas une garantie.")
-
-
-def _recent_forecast(forecast: pd.DataFrame) -> None:
-    st.header("Recent Forecast")
-    table = forecast.head(7).drop(columns=["reliable"], errors="ignore").copy()
-    table.insert(1, "Day", table["date"].dt.day_name())
+def _forecast_tab(forecast: pd.DataFrame, history: pd.DataFrame) -> None:
+    st.subheader("Forecast")
+    st.plotly_chart(_forecast_chart(history, forecast), width="stretch",
+                    config={"displayModeBar": False})
+    table = forecast[["date", "forecast", "lower_80", "upper_80", "reliable"]].copy()
     table["date"] = table["date"].dt.strftime("%d %b %Y")
+    table["status"] = table.pop("reliable").map({True: "Reliable", False: "Low confidence"})
     for column in ["forecast", "lower_80", "upper_80"]:
-        table[column] = table[column].round().map(_gbp)
+        table[column] = table[column].map(_gbp)
     st.dataframe(table.rename(columns={
-        "date": "Date", "forecast": "Forecast", "lower_80": "Lower 80%", "upper_80": "Upper 80%"
+        "date": "Date", "forecast": "Forecast", "lower_80": "Lower 80%",
+        "upper_80": "Upper 80%", "status": "Status",
     }), hide_index=True, width="stretch")
-    st.download_button(
-        "Télécharger les jours fiables",
-        forecast.to_csv(index=False),
-        "forecast.csv",
-        "text/csv",
-    )
+    st.download_button("Download forecast CSV", forecast.to_csv(index=False),
+                       "forecast.csv", "text/csv", width="content")
 
 
-def _performance(metrics: pd.DataFrame) -> None:
-    st.header("Model Performance")
-    st.caption("Métriques issues de la période de test tenue à l'écart du réglage ; horizon agrégé de 28 jours.")
-    display = metrics.loc[metrics["model"].isin(["baseline", "prophet", "xgboost"]),
-                          ["model", "mae", "rmse", "wape", "bias"]].copy()
-    display["wape"] = display["wape"].map(lambda value: f"{value:.1%}")
-    display["mae"] = display["mae"].map(_gbp)
-    display["rmse"] = display["rmse"].map(_gbp)
-    display["bias"] = display["bias"].map(_gbp)
+def _performance_tab(metrics: pd.DataFrame) -> None:
+    st.subheader("Test set performance")
+    models = ["baseline", "xgboost", "prophet"]
+    display = metrics.loc[metrics["model"].isin(models)].copy()
+    display["model"] = display["model"].str.title().replace({"Xgboost": "XGBoost"})
+    for bucket in ["wape", "1-7_wape", "8-14_wape", "15-28_wape"]:
+        if bucket in display:
+            display[bucket] = display[bucket].map(lambda value: f"{value:.1%}")
+    for column in ["mae", "bias"]:
+        display[column] = display[column].map(_gbp)
+    columns = ["model", "wape", "mae", "bias", "1-7_wape", "8-14_wape", "15-28_wape"]
+    display = display[[column for column in columns if column in display]]
     st.dataframe(display.rename(columns={
-        "model": "Model", "mae": "MAE", "rmse": "RMSE", "wape": "WAPE", "bias": "Bias (forecast - actual)"
+        "model": "Model", "wape": "WAPE", "mae": "MAE", "bias": "Bias",
+        "1-7_wape": "Days 1–7 WAPE", "8-14_wape": "Days 8–14 WAPE",
+        "15-28_wape": "Days 15–28 WAPE",
     }), hide_index=True, width="stretch")
-    st.caption("MAE, RMSE et WAPE : plus bas est meilleur. Biais positif = sur-prévision ; négatif = sous-prévision.")
+    origins = _read_csv("test_per_origin.csv", {"model", "origin", "regime", "wape"}, ["origin"])
+    figure = go.Figure()
+    colors = {"baseline": "#9CA3AF", "xgboost": "#6B7280", "prophet": "#2563EB"}
+    for model in models:
+        points = origins.loc[origins["model"].eq(model)]
+        if not points.empty:
+            figure.add_trace(go.Scatter(
+                x=points["origin"], y=points["wape"], mode="lines+markers",
+                name=model.title().replace("Xgboost", "XGBoost"),
+                line={"color": colors[model]},
+                hovertemplate="%{x|%d %b %Y}<br>WAPE %{y:.1%}<extra></extra>",
+            ))
+    figure.update_layout(
+        template="plotly_white", height=360, margin={"l": 10, "r": 10, "t": 30, "b": 10},
+        hovermode="x unified", font={"family": "system-ui"},
+        legend={"orientation": "h", "y": 1.12, "x": 0},
+        xaxis={"title": None, "showgrid": False},
+        yaxis={"title": "WAPE", "tickformat": ".0%", "showgrid": True,
+               "gridcolor": "#E5E7EB"},
+    )
+    st.subheader("WAPE by test origin")
+    st.plotly_chart(figure, width="stretch", config={"displayModeBar": False})
 
 
-def _insights(forecast: pd.DataFrame, history: pd.DataFrame) -> None:
-    st.header("Quick Insights")
-    insight_columns = st.columns(3)
-    weekday = history.assign(weekday=history["date"].dt.day_name()).groupby("weekday")["revenue"].mean()
-    strongest = weekday.idxmax()
-    insight_columns[0].write(f"**Jour le plus fort**  \n{strongest}, avec {_gbp(weekday.max())} en moyenne.")
-    insight_columns[1].write(f"**Prévision à 7 jours**  \n{_gbp(forecast.head(7)['forecast'].sum())}.")
-    trend = history.tail(28)["revenue"].mean() - history.tail(56).head(28)["revenue"].mean()
-    direction = "en hausse" if trend > 0 else "en baisse"
-    insight_columns[2].write(f"**Dernière tendance disponible**  \nMoyenne des 28 derniers jours {direction}.")
+def _method_tab(forecast: pd.DataFrame, history: pd.DataFrame, champion: str) -> None:
+    st.subheader("Data and method")
+    st.markdown(
+        f"- The dashboard uses precomputed daily revenue from the UCI Online Retail dataset "
+        f"with {len(history):,} days of history and a {len(forecast)}-day forecast."
+    )
+    st.markdown("- Revenue is cleaned and aggregated upstream before the dashboard reads these exports.")
+    st.markdown("- Models are compared with rolling-origin evaluation, and the champion is selected by test WAPE. "
+                f"The selected model is **{champion.title()}**.")
+    st.markdown("- The 80% intervals are empirical forecast bounds from the exported forecast file; interval coverage "
+                "has not been verified out of sample.")
+    st.markdown("- Limitations include 373 days of history, overlapping test windows, and negative forecast bias.")
+    eda_path = DATA_DIR / "eda_summary.csv"
+    if eda_path.exists():
+        eda = pd.read_csv(eda_path)
+        weekday = eda.loc[eda["dimension"].eq("weekday")].copy()
+        if not weekday.empty:
+            st.subheader("Average revenue by weekday")
+            figure = go.Figure(go.Bar(x=weekday["key"], y=weekday["revenue"], marker_color="#2563EB"))
+            figure.update_layout(
+                template="plotly_white", height=300, font={"family": "system-ui"},
+                xaxis={"title": None, "showgrid": False},
+                yaxis={"title": "Revenue (£)", "tickprefix": "£", "showgrid": True,
+                       "gridcolor": "#E5E7EB"},
+            )
+            st.plotly_chart(figure, width="stretch", config={"displayModeBar": False})
 
 
 def main() -> None:
-    st.set_page_config(page_title="Retail Revenue Forecasting", layout="wide")
+    st.set_page_config(
+        page_title="Retail Revenue Forecast", layout="wide",
+        initial_sidebar_state="collapsed",
+    )
     st.markdown("""
     <style>
-    .stApp { background: #FFFFFF; color: #172A46; }
-    [data-testid="stSidebar"] { background: #F4F7FA; width: 220px; }
-    .block-container { padding-top: 2rem; }
-    div[data-testid="stMetric"] { border: 1px solid #DCE5EC; border-radius: 8px; padding: 12px; }
+    .block-container { max-width: 1100px; padding-top: 1.5rem; }
+    footer { visibility: hidden; }
+    div[data-testid="stMetric"] {
+        border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; box-shadow: none;
+    }
     </style>
     """, unsafe_allow_html=True)
     try:
@@ -254,20 +295,32 @@ def main() -> None:
         st.error(str(error))
         st.stop()
 
-    st.title("Retail Revenue Forecasting")
-    st.subheader("Historical performance, model evaluation and revenue prediction")
-    st.caption("Days after reopening are not forecast because the post-closure level is not validated.")
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Overview", "Recent Forecast", "Model Performance", "Quick Insights"])
-    st.sidebar.caption(f"Champion model : {champion.title()}")
-    if page == "Overview":
-        _overview(forecast, history, metrics, champion)
-    elif page == "Recent Forecast":
-        _recent_forecast(forecast)
-    elif page == "Model Performance":
-        _performance(metrics)
-    else:
-        _insights(forecast, history)
+    prophet = metrics.loc[metrics["model"].eq("prophet")].iloc[0]
+    baseline = metrics.loc[metrics["model"].eq("baseline")].iloc[0]
+    trading = forecast.loc[forecast["forecast"].gt(0)]
+    forecast_total = forecast["forecast"].sum()
+    average_forecast = forecast_total / len(trading) if len(trading) else 0
+    wape_delta = (prophet["wape"] - baseline["wape"]) * 100
+    st.title("Retail Revenue Forecast")
+    st.caption("28-day daily revenue forecast on the UCI Online Retail dataset")
+    st.caption(f"Data through {history['date'].max():%d %b %Y}")
+    cards = st.columns(4)
+    cards[0].metric("28-day forecast total", _gbp(forecast_total), f"{len(trading)} trading days")
+    cards[1].metric("Average forecast per trading day", _gbp(average_forecast))
+    cards[2].metric(
+        "Prophet test WAPE", f"{prophet['wape']:.1%}",
+        f"{wape_delta:+.1f} pp vs seasonal naive", delta_color="inverse",
+    )
+    cards[3].metric("Reliable forecast days", f"{int(forecast['reliable'].sum())}")
+    forecast_tab, performance_tab, method_tab = st.tabs(
+        ["Forecast", "Model performance", "Data and method"]
+    )
+    with forecast_tab:
+        _forecast_tab(forecast, history)
+    with performance_tab:
+        _performance_tab(metrics)
+    with method_tab:
+        _method_tab(forecast, history, champion)
 
 
 if __name__ == "__main__":

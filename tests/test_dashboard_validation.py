@@ -39,27 +39,27 @@ def valid_frames():
 def test_rejects_missing_date(config, valid_frames):
     forecast, history = valid_frames
     forecast.loc[3, "date"] = pd.NaT
-    with pytest.raises(ValueError, match="dates invalides"):
+    with pytest.raises(ValueError, match="contains invalid dates"):
         _validate_forecast_data(forecast, history, config)
 
 
 def test_rejects_duplicate_date(config, valid_frames):
     forecast, history = valid_frames
     forecast.loc[3, "date"] = forecast.loc[2, "date"]
-    with pytest.raises(ValueError, match="dupliquées"):
+    with pytest.raises(ValueError, match="contains duplicate dates"):
         _validate_forecast_data(forecast, history, config)
 
 
 def test_rejects_wrong_horizon(config, valid_frames):
     forecast, history = valid_frames
-    with pytest.raises(ValueError, match="Horizon inattendu"):
+    with pytest.raises(ValueError, match="Unexpected horizon"):
         _validate_forecast_data(forecast.iloc[:-1], history, config)
 
 
 def test_rejects_invalid_interval(config, valid_frames):
     forecast, history = valid_frames
     forecast.loc[0, "lower_80"] = 11.0
-    with pytest.raises(ValueError, match="bornes"):
+    with pytest.raises(ValueError, match="Bounds"):
         _validate_forecast_data(forecast, history, config)
 
 
@@ -70,7 +70,7 @@ def test_rejects_nonzero_configured_closure(config, valid_frames, date):
     forecast, history = valid_frames
     position = (forecast["date"] == pd.Timestamp(date)).idxmax()
     forecast.loc[position, ["forecast", "lower_80", "upper_80"]] = [1.0, 0.5, 1.5]
-    with pytest.raises(ValueError, match="fermés"):
+    with pytest.raises(ValueError, match="closed days"):
         _validate_forecast_data(forecast, history, config)
 
 
