@@ -126,7 +126,7 @@ def main() -> None:
             "fig, ax = plt.subplots(figsize=(12, 4)); ax.plot(closure_window.date, closure_window.revenue, marker='o')\n"
             "ax.axvspan(pd.Timestamp('2010-12-24'), pd.Timestamp('2011-01-03'), alpha=.2, color='red', label='closure Dec 24-Jan 3')\n"
             "ax.set(title='Christmas closure window', ylabel='£'); ax.legend(); fig.autofmt_xdate(); fig.tight_layout(); fig.savefig(figures/'christmas_closure_window.png'); plt.show()\n"
-            "print(f\"Fenêtre 2010-12-15 → 2011-01-10 : {len(closure_window)} jours, {int(closure_window.n_transactions.sum())} transactions dans la fermeture, £{closure_window.loc[closure_window.date.between('2010-12-24','2011-01-03'),'revenue'].sum():,.2f} sur la fermeture.\")"
+            "print(f\"Window 2010-12-15 -> 2011-01-10: {len(closure_window)} days, {int(closure_window.n_transactions.sum())} transactions during closure, £{closure_window.loc[closure_window.date.between('2010-12-24','2011-01-03'),'revenue'].sum():,.2f} during closure.\")"
         ),
         nbf.v4.new_markdown_cell("## c. Weekday profile"),
         nbf.v4.new_code_cell(
